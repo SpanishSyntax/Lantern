@@ -1,0 +1,28 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<div class="lantern-container lantern-container-wide">
+  <!-- Dashboard Header -->
+  <section class="lantern-hero" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <span class="lantern-badge" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa; border-color: rgba(167, 139, 250, 0.3);">
+          Simulation Dashboard
+        </span>
+        <h1 class="lantern-title" style="font-size: 2.2rem; margin-bottom: 0.5rem;">{{ title }}</h1>
+        {% if subtitle %}
+          <p class="lantern-subtitle" style="font-size: 1rem; margin-bottom: 0;">{{ subtitle }}</p>
+        {% endif %}
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="lantern-btn lantern-btn-primary" onclick="window.print()">Export Report</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dashboard Prose & Grid -->
+  <article class="lantern-prose">
+    {{ content | safe }}
+  </article>
+</div>
+{% endblock %}

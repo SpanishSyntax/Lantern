@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lantern"
+version = "0.1.0"
+description = "Interactive explainer and simulation dashboard compiler"
+readme = "README.md"
+authors = [{ name = "SpanishSyntax", email = "spanishsyntax@pyritelabs.cc" }]
+license = { text = "MIT" }
+requires-python = ">=3.11"
+keywords = ["interactive", "explainer", "dashboard", "compiler", "canvas", "katex", "frost", "barograph"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Topic :: Utilities",
+]
+dependencies = [
+  "jinja2>=3.0",
+  "markdown>=3.4",
+  "watchdog>=3.0",
+  "rich>=13.0",
+  "prism",
+]
+
+[project.optional-dependencies]
+barograph = ["barograph"]
+test = [
+  "pytest>=7.0",
+]
+
+[project.scripts]
+lantern = "lantern.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["lantern*"]
+
+[tool.setuptools.package-data]
+lantern = [
+  "templates/*",
+  "templates/**/*",
+  "static/*",
+  "static/**/*",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

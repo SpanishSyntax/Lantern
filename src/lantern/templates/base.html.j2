@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ title | default("Lantern Explainer") }}</title>
+  
+  {# Favicon / Icon #}
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏮</text></svg>">
+
+  {# KaTeX Math Assets #}
+  {% if standalone %}
+    <style>{{ katex_css | safe }}</style>
+    <script>{{ katex_js | safe }}</script>
+    <script>{{ katex_auto_render_js | safe }}</script>
+  {% else %}
+    <link rel="stylesheet" href="{{ static_prefix }}/katex/katex.min.css" />
+    <script defer src="{{ static_prefix }}/katex/katex.min.js"></script>
+    <script defer src="{{ static_prefix }}/katex/contrib/auto-render.min.js"></script>
+  {% endif %}
+
+  {# Plotly CDN if Plotly figure is embedded #}
+  {% if has_plotly %}
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  {% endif %}
+
+  {# Lantern Stylesheet #}
+  {% if standalone %}
+    <style>{{ lantern_css | safe }}</style>
+  {% else %}
+    <link rel="stylesheet" href="{{ static_prefix }}/lantern.css" />
+  {% endif %}
+
+  {# Additional head injection #}
+  {% block head_extra %}{% endblock %}
+
+  {# Live Reload Script #}
+  {% if live_reload %}
+    <script id="__lantern_live_reload">
+      (function() {
+        const evtSource = new EventSource("/_lantern/events");
+        evtSource.onmessage = function(e) {
+          if (e.data === "reload") {
+            console.log("[Lantern] Document or script modified. Reloading...");
+            location.reload();
+          }
+        };
+        evtSource.onerror = function() {
+          setTimeout(() => {}, 1500);
+        };
+      })();
+    </script>
+  {% endif %}
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="lantern-nav">
+    <a href="#" class="lantern-brand">
+      <span class="lantern-brand-icon">🏮</span>
+      <span>{{ brand | default("Lantern") }}</span>
+    </a>
+    <div class="lantern-nav-meta">
+      {% if live_reload %}
+        <span class="lantern-badge" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border-color: rgba(52, 211, 153, 0.3);">
+          ● Live Sync
+        </span>
+      {% endif %}
+      <span>Frost Engine</span>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="lantern-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="lantern-footer">
+    <div class="lantern-container">
+      <p>Compiled with <strong>Lantern</strong> — Frost's Interactive Explainer & Simulation Compiler.</p>
+      {% if date %}<p style="margin-top: 0.3rem;">Generated on {{ date }}</p>{% endif %}
+    </div>
+  </footer>
+
+  {# Lantern Core and Widget Scripts #}
+  {% if standalone %}
+    <script>{{ lantern_js | safe }}</script>
+    {% if has_walker %}<script>{{ walker_js | safe }}</script>{% endif %}
+    {% if has_barrier %}<script>{{ barrier_js | safe }}</script>{% endif %}
+    {% if has_decision %}<script>{{ decision_js | safe }}</script>{% endif %}
+  {% else %}
+    <script src="{{ static_prefix }}/lantern.js"></script>
+    {% if has_walker %}<script src="{{ static_prefix }}/walker.js"></script>{% endif %}
+    {% if has_barrier %}<script src="{{ static_prefix }}/barrier.js"></script>{% endif %}
+    {% if has_decision %}<script src="{{ static_prefix }}/decision.js"></script>{% endif %}
+  {% endif %}
+
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

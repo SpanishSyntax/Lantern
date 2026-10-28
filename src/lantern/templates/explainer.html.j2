@@ -1,0 +1,41 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<div class="lantern-container">
+  <!-- Explainer Hero -->
+  <section class="lantern-hero">
+    <div class="lantern-hero-split">
+      <div>
+        <span class="lantern-badge">Interactive Explainer</span>
+        <h1 class="lantern-title">{{ title }}</h1>
+        {% if subtitle %}
+          <p class="lantern-subtitle">{{ subtitle }}</p>
+        {% endif %}
+        <div class="lantern-meta-bar">
+          {% if author %}
+            <div class="lantern-meta-item">
+              <span>✍</span>
+              <span>{{ author }}</span>
+            </div>
+          {% endif %}
+          {% if date %}
+            <div class="lantern-meta-item">
+              <span>📅</span>
+              <span>{{ date }}</span>
+            </div>
+          {% endif %}
+          <div class="lantern-meta-item">
+            <span>⚡</span>
+            <span>Interactive Simulation Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Markdown Document Flow -->
+  <article class="lantern-prose">
+    {{ content | safe }}
+  </article>
+</div>
+{% endblock %}
