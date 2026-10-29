@@ -175,27 +175,63 @@ class LanternDevHandler(http.server.BaseHTTPRequestHandler):
 class WorkspaceWatcher(FileSystemEventHandler):
     """Watches markdown file, referenced python scripts, and templates for changes."""
 
-    def __init__(self, server: LanternDevServer) -> None:
-        self.server = server
-        self.last_trigger = 0.0
+    VALID_EXTENSIONS = {".md", ".py", ".j2", ".css", ".js"}
+    IGNORE_PREFIXES = {".", "#", "___jb_"}
+    IGNORE_SUFFIXES = {"~", ".tmp", ".swp", ".swo", ".bak", ".crswap"}
 
-    def on_any_event(self, event: FileSystemEvent) -> None:
+    def __init__(self, server: LanternDevServer, debounce_delay: float = 0.15) -> None:
+        self.server = server
+        self.debounce_delay = debounce_delay
+        self._timer: threading.Timer | None = None
+        self._lock = threading.Lock()
+        self._pending_path: Path | None = None
+
+    def _should_handle(self, path: Path) -> bool:
+        name = path.name
+        # Ignore temporary, swap, and editor backup files
+        if any(name.startswith(pre) for pre in self.IGNORE_PREFIXES):
+            return False
+        if any(name.endswith(suf) for suf in self.IGNORE_SUFFIXES):
+            return False
+        return path.suffix in self.VALID_EXTENSIONS
+
+    def _schedule_notify(self, target_path: Path) -> None:
+        with self._lock:
+            if self._timer is not None:
+                self._timer.cancel()
+            self._pending_path = target_path
+            self._timer = threading.Timer(self.debounce_delay, self._dispatch)
+            self._timer.daemon = True
+            self._timer.start()
+
+    def _dispatch(self) -> None:
+        with self._lock:
+            target = self._pending_path
+            self._timer = None
+            self._pending_path = None
+        if target is not None:
+            self.server.notify_change(target)
+
+    def on_modified(self, event: FileSystemEvent) -> None:
         if event.is_directory:
             return
+        p = Path(event.src_path).resolve()
+        if self._should_handle(p):
+            self._schedule_notify(p)
 
-        src_path = Path(event.src_path).resolve()
-        # Filter files of interest (.md, .py, .j2, .css, .js)
-        if src_path.suffix not in (".md", ".py", ".j2", ".css", ".js"):
+    def on_created(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
             return
+        p = Path(event.src_path).resolve()
+        if self._should_handle(p):
+            self._schedule_notify(p)
 
-        now = time.time()
-        # Debounce rapid file write events (150ms)
-        if now - self.last_trigger < 0.15:
+    def on_moved(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
             return
-        self.last_trigger = now
-
-        # Trigger recompile and browser reload
-        self.server.notify_change(src_path)
+        dest_p = Path(getattr(event, "dest_path", event.src_path)).resolve()
+        if self._should_handle(dest_p):
+            self._schedule_notify(dest_p)
 
 
 class LanternDevServer:
@@ -223,11 +259,29 @@ class LanternDevServer:
         self.httpd: http.server.ThreadingHTTPServer | None = None
 
     def get_latest_html(self) -> str:
-        """Compile document on demand or return cached version."""
-        if not self.target_file.exists():
-            raise FileNotFoundError(f"Target document not found: {self.target_file}")
+        """Compile document on demand or return cached version with atomic save tolerance."""
+        # Retry with brief backoff in case of editor atomic file replacement / inode swap
+        text = None
+        for attempt in range(5):
+            if self.target_file.exists():
+                try:
+                    raw = self.target_file.read_text(encoding="utf-8")
+                    # If file was truncated to 0 bytes momentarily during editor save, wait briefly
+                    if len(raw) == 0 and attempt < 4:
+                        time.sleep(0.04)
+                        continue
+                    text = raw
+                    break
+                except (OSError, PermissionError):
+                    time.sleep(0.04)
+            else:
+                time.sleep(0.04)
 
-        text = self.target_file.read_text(encoding="utf-8")
+        if text is None:
+            if not self.target_file.exists():
+                raise FileNotFoundError(f"Target document not found: {self.target_file}")
+            text = self.target_file.read_text(encoding="utf-8")
+
         self.cached_html = self.compiler.compile(
             markdown_text=text,
             template_name=self.template_name,
@@ -295,16 +349,10 @@ class LanternDevServer:
         # Initial compile to extract referenced python scripts
         self.get_latest_html()
 
-        # Start watchdog
+        # Start watchdog on workspace directory
         self.observer = Observer()
         handler = WorkspaceWatcher(self)
         self.observer.schedule(handler, str(self.workspace_dir), recursive=True)
-
-        # Also watch templates and static dir
-        if self.compiler.template_dir.exists():
-            self.observer.schedule(handler, str(self.compiler.template_dir), recursive=True)
-        if self.compiler.static_dir.exists():
-            self.observer.schedule(handler, str(self.compiler.static_dir), recursive=True)
 
         self.observer.start()
 

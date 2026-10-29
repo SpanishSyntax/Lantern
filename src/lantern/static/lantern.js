@@ -96,6 +96,96 @@
   }
 
   // =========================================================================
+  // 3b. Floating Section Dot Navigation Rail (ScrollSpy)
+  // =========================================================================
+  function initSectionDotNav() {
+    const rail = document.getElementById('lantern-dot-nav');
+    if (!rail) return;
+
+    // Discover major sections: prefer h2 elements within prose, or h1/h2 if sparse
+    let sections = Array.from(document.querySelectorAll('.lantern-prose h2'));
+    if (sections.length < 2) {
+      sections = Array.from(document.querySelectorAll('.lantern-prose h1, .lantern-prose h2'));
+    }
+
+    // Only render dot navigation if there are at least 2 distinct sections
+    if (sections.length < 2) {
+      rail.style.display = 'none';
+      return;
+    }
+
+    rail.innerHTML = '';
+    const dots = [];
+
+    sections.forEach((heading, index) => {
+      if (!heading.id) {
+        heading.id = `section-${index + 1}`;
+      }
+
+      // Clean title text (strip '#' permalink symbol from textContent)
+      const clone = heading.cloneNode(true);
+      const permalink = clone.querySelector('.lantern-anchor');
+      if (permalink) permalink.remove();
+      const titleText = clone.textContent.trim();
+
+      const dot = document.createElement('a');
+      dot.className = 'lantern-dot';
+      dot.href = `#${heading.id}`;
+      dot.setAttribute('aria-label', titleText);
+      dot.dataset.target = heading.id;
+
+      const tooltip = document.createElement('span');
+      tooltip.className = 'lantern-dot-tooltip';
+      tooltip.textContent = titleText;
+      dot.appendChild(tooltip);
+
+      dot.addEventListener('click', (e) => {
+        e.preventDefault();
+        heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.pushState(null, null, `#${heading.id}`);
+      });
+
+      rail.appendChild(dot);
+      dots.push({ dot, heading });
+    });
+
+    // ScrollSpy observer to activate dot corresponding to currently viewed section
+    function setActiveDot(activeId) {
+      dots.forEach(({ dot }) => {
+        const isActive = dot.dataset.target === activeId;
+        dot.classList.toggle('active', isActive);
+        if (isActive) {
+          dot.setAttribute('aria-current', 'true');
+        } else {
+          dot.removeAttribute('aria-current');
+        }
+      });
+    }
+
+    // Scroll listener fallback & observer for active section detection
+    let scrollTimeout;
+    function checkActiveByScroll() {
+      const scrollPos = window.scrollY + 160;
+      let currentId = sections[0].id;
+      for (let i = 0; i < sections.length; i++) {
+        if (sections[i].offsetTop <= scrollPos) {
+          currentId = sections[i].id;
+        } else {
+          break;
+        }
+      }
+      setActiveDot(currentId);
+    }
+
+    window.addEventListener('scroll', () => {
+      if (scrollTimeout) cancelAnimationFrame(scrollTimeout);
+      scrollTimeout = requestAnimationFrame(checkActiveByScroll);
+    }, { passive: true });
+
+    checkActiveByScroll();
+  }
+
+  // =========================================================================
   // 4. Lab Atoms & Control Event Dispatch
   // =========================================================================
   function dispatchControlEvent(id, value) {
@@ -381,6 +471,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     initProgressBar();
     initHeadingAnchors();
+    initSectionDotNav();
     initSliders();
     initSwitches();
     initSegments();

@@ -106,6 +106,86 @@ body {
   transition: width 0.1s ease-out;
 }
 
+/* Floating Section Dot Navigation Rail (ScrollSpy) */
+.lantern-dot-nav {
+  position: fixed;
+  right: 1.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.5rem;
+  pointer-events: auto;
+}
+
+.lantern-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--border-medium);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  text-decoration: none;
+  display: block;
+  cursor: pointer;
+}
+
+.lantern-dot:hover {
+  background: var(--text-secondary);
+  transform: scale(1.4);
+}
+
+.lantern-dot.active {
+  background: var(--cyan);
+  height: 22px;
+  width: 8px;
+  border-radius: 9999px;
+  box-shadow: 0 0 12px var(--cyan);
+  transform: none;
+}
+
+.lantern-dot-tooltip {
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  background: rgba(19, 25, 36, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.2s ease;
+  box-shadow: var(--shadow-md);
+  z-index: 1000;
+}
+
+.lantern-dot:hover .lantern-dot-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+}
+
+@media (max-width: 1100px) {
+  .lantern-dot-nav {
+    display: none !important;
+  }
+}
+
 /* Layout Containers */
 .lantern-container {
   width: 100%;

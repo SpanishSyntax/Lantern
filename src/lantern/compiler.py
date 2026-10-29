@@ -190,6 +190,7 @@ class LanternCompiler:
             "author": author,
             "date": date,
             "snowpack_pdf": snowpack_pdf,
+            "nav_dots": frontmatter.get("nav_dots", True),
             "content": rendered_content,
             "standalone": standalone,
             "live_reload": live_reload,
