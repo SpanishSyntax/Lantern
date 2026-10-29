@@ -89,7 +89,7 @@ class PlotBlockProcessor(BlockProcessor):
         if self.compiler is not None:
             self.compiler.register_watched_script(script_path)
 
-        display_title = title or script_path.name
+        display_title = title
 
         # Execute and render figure
         plot_html, has_plotly = self._render_plot(script_path, backend, height, display_title, plot_id)
@@ -211,6 +211,8 @@ class PlotBlockProcessor(BlockProcessor):
         script_path: Path,
     ) -> tuple[str, bool]:
         """Convert a live Python figure object into HTML or SVG markup."""
+        title_html = f"<span>{html.escape(title)}</span>" if title else ""
+
         # Plotly
         if (requested_backend == "plotly" or detected_backend == "plotly") and (hasattr(fig, "to_html") or hasattr(fig, "write_html")):
             if hasattr(fig, "to_html"):
@@ -224,8 +226,7 @@ class PlotBlockProcessor(BlockProcessor):
 <div class="lantern-plot-wrapper" id="{plot_id}">
   <div class="lantern-plot-header">
     <div class="lantern-plot-title">
-      <span class="lantern-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); margin-bottom: 0;">Plotly Interactive</span>
-      <span>{html.escape(title)}</span>
+      {title_html}
     </div>
     <div class="lantern-plot-actions">
       <button class="lantern-btn lantern-btn-sm lantern-lightbox-trigger" data-target="{plot_id}" title="Toggle Fullscreen Lightbox">⛶ Lightbox</button>
@@ -249,8 +250,7 @@ class PlotBlockProcessor(BlockProcessor):
 <div class="lantern-plot-wrapper" id="{plot_id}">
   <div class="lantern-plot-header">
     <div class="lantern-plot-title">
-      <span class="lantern-badge" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border-color: rgba(52, 211, 153, 0.3); margin-bottom: 0;">Vector SVG</span>
-      <span>{html.escape(title)}</span>
+      {title_html}
     </div>
     <div class="lantern-plot-actions">
       <button class="lantern-btn lantern-btn-sm lantern-lightbox-trigger" data-target="{plot_id}" title="Toggle Fullscreen Lightbox">⛶ Lightbox</button>
@@ -273,14 +273,12 @@ class PlotBlockProcessor(BlockProcessor):
         self, content: str, fmt: str, height: str, title: str, plot_id: str, script_path: Path
     ) -> tuple[str, bool]:
         has_plotly = "plotly" in content.lower()
-        badge_text = "Vector SVG" if fmt == "svg" else "Interactive Plot"
-        badge_color = "#34d399" if fmt == "svg" else "#38bdf8"
+        title_html = f"<span>{html.escape(title)}</span>" if title else ""
         wrapped = f"""
 <div class="lantern-plot-wrapper" id="{plot_id}">
   <div class="lantern-plot-header">
     <div class="lantern-plot-title">
-      <span class="lantern-badge" style="background: rgba(56, 189, 248, 0.15); color: {badge_color}; border-color: rgba(56, 189, 248, 0.3); margin-bottom: 0;">{badge_text}</span>
-      <span>{html.escape(title)}</span>
+      {title_html}
     </div>
     <div class="lantern-plot-actions">
       <button class="lantern-btn lantern-btn-sm lantern-lightbox-trigger" data-target="{plot_id}" title="Toggle Fullscreen Lightbox">⛶ Lightbox</button>

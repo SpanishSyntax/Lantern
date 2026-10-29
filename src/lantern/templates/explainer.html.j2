@@ -6,29 +6,29 @@
   <section class="lantern-hero">
     <div class="lantern-hero-split">
       <div>
-        <span class="lantern-badge">Interactive Explainer</span>
+        {% if badge %}
+          <span class="lantern-badge">{{ badge }}</span>
+        {% endif %}
         <h1 class="lantern-title">{{ title }}</h1>
         {% if subtitle %}
           <p class="lantern-subtitle">{{ subtitle }}</p>
         {% endif %}
-        <div class="lantern-meta-bar">
-          {% if author %}
-            <div class="lantern-meta-item">
-              <span>✍</span>
-              <span>{{ author }}</span>
-            </div>
-          {% endif %}
-          {% if date %}
-            <div class="lantern-meta-item">
-              <span>📅</span>
-              <span>{{ date }}</span>
-            </div>
-          {% endif %}
-          <div class="lantern-meta-item">
-            <span>⚡</span>
-            <span>Interactive Scientific Lab Ready</span>
+        {% if author or date %}
+          <div class="lantern-meta-bar">
+            {% if author %}
+              <div class="lantern-meta-item">
+                <span>✍</span>
+                <span>{{ author }}</span>
+              </div>
+            {% endif %}
+            {% if date %}
+              <div class="lantern-meta-item">
+                <span>📅</span>
+                <span>{{ date }}</span>
+              </div>
+            {% endif %}
           </div>
-        </div>
+        {% endif %}
       </div>
     </div>
   </section>
