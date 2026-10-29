@@ -215,6 +215,19 @@ class PlotBlockProcessor(BlockProcessor):
 
         # Plotly
         if (requested_backend == "plotly" or detected_backend == "plotly") and (hasattr(fig, "to_html") or hasattr(fig, "write_html")):
+            if hasattr(fig, "layout"):
+                layout = getattr(fig, "layout", None)
+                if layout is not None and getattr(layout, "uirevision", None) is None:
+                    try:
+                        fig.layout.uirevision = "lantern-persist"
+                    except Exception:
+                        pass
+            elif hasattr(fig, "update_layout") and callable(fig.update_layout):
+                try:
+                    fig.update_layout(uirevision="lantern-persist")
+                except Exception:
+                    pass
+
             if hasattr(fig, "to_html"):
                 inner = fig.to_html(include_plotlyjs=False, full_html=False, default_height=height)
             else:

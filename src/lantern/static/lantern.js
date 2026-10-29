@@ -280,6 +280,14 @@
         navButtons.forEach((btn, i) => btn.classList.toggle('active', i === currentStep));
         panes.forEach((pane, i) => pane.classList.toggle('active', i === currentStep));
 
+        if (navButtons[currentStep]) {
+          navButtons[currentStep].scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
+
         if (readout) readout.textContent = `Step ${currentStep + 1} of ${totalSteps}`;
       }
 
@@ -307,6 +315,12 @@
 
           btn.classList.add('active');
           if (panes[idx]) panes[idx].classList.add('active');
+
+          btn.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+          });
         });
       });
     });

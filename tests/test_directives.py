@@ -308,3 +308,31 @@ fig = MockFig()
     assert "Vector Figure" in html_out
     assert "lantern-lightbox-trigger" in html_out
     assert "<svg" in html_out
+
+
+def test_plot_directive_auto_injects_uirevision(tmp_path):
+    script = tmp_path / "plot_plotly.py"
+    script.write_text(
+        """
+class MockLayout:
+    uirevision = None
+
+class MockPlotlyFig:
+    def __init__(self):
+        self.layout = MockLayout()
+    def to_html(self, **kwargs):
+        return f"<div class='plotly-graph-div' data-uirevision='{self.layout.uirevision}'></div>"
+
+fig = MockPlotlyFig()
+""",
+        encoding="utf-8",
+    )
+
+    compiler = LanternCompiler()
+    md = f"""
+::: plot {script.name} backend=plotly title="Auto UIRevision Plot"
+:::
+"""
+    html_out = compiler.compile(md, base_dir=tmp_path)
+    assert "lantern-plot-wrapper" in html_out
+    assert "data-uirevision='lantern-persist'" in html_out
