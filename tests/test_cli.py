@@ -1,8 +1,25 @@
-"""Tests for Lantern CLI commands."""
+"""Tests for Lantern CLI commands and Prism interactive interface."""
 
 from pathlib import Path
 import pytest
 from lantern.cli import main
+
+
+def test_cli_help(capsys):
+    ret = main(["-h"])
+    assert ret == 0
+    captured = capsys.readouterr()
+    assert "lantern" in captured.out.lower()
+    assert "Usage:" in captured.out
+    assert "Commands:" in captured.out
+    assert "Directives Ecosystem:" in captured.out
+
+
+def test_cli_version(capsys):
+    ret = main(["-v"])
+    assert ret == 0
+    captured = capsys.readouterr()
+    assert "0.1.0" in captured.out
 
 
 def test_cli_status(capsys):
@@ -10,6 +27,21 @@ def test_cli_status(capsys):
     assert ret == 0
     captured = capsys.readouterr()
     assert "Lantern Status" in captured.out or "lantern" in captured.out.lower()
+
+
+def test_cli_no_args(capsys):
+    ret = main([])
+    assert ret == 0
+    captured = capsys.readouterr()
+    assert "Lantern" in captured.out
+
+
+def test_cli_list(capsys):
+    ret = main(["list"])
+    assert ret == 0
+    captured = capsys.readouterr()
+    assert "Templates" in captured.out
+    assert "explainer" in captured.out
 
 
 def test_cli_new_and_build(tmp_path, monkeypatch):
@@ -32,6 +64,12 @@ def test_cli_new_and_build(tmp_path, monkeypatch):
     content = out_html.read_text(encoding="utf-8")
     assert "<style>" in content
     assert "Interactive Explainer" in content
+
+    # Test direct file compile (without 'build' subcommand)
+    out_custom = explainer_dir / "dist" / "custom.html"
+    ret_direct = main(["explainer.md", "-o", str(out_custom)])
+    assert ret_direct == 0
+    assert out_custom.exists()
 
 
 def test_cli_new_optimization(tmp_path, monkeypatch):

@@ -1,4 +1,4 @@
-"""CLI commands, router, and Prism status dashboard for Lantern."""
+"""CLI commands, router, and Prism interactive interface for Lantern."""
 
 from __future__ import annotations
 
@@ -13,86 +13,85 @@ from typing import Any, Sequence
 from lantern import __version__
 from lantern.compiler import LanternCompiler
 from lantern.server import LanternDevServer
-
-# Prism UI integration with graceful ANSI fallback
-try:
-    from prism import UI, render_panel  # type: ignore
-
-    ui = UI(app_name="lantern", icon="🏮", badge_color="1;36")
-except ImportError:
-    class FallbackUI:
-        def badge(self) -> str:
-            return "\033[1;36m[🏮 lantern]\033[0m"
-
-        def bold(self, text: str) -> str:
-            return f"\033[1m{text}\033[0m"
-
-        def cyan(self, text: str) -> str:
-            return f"\033[36m{text}\033[0m"
-
-        def green(self, text: str) -> str:
-            return f"\033[32m{text}\033[0m"
-
-        def yellow(self, text: str) -> str:
-            return f"\033[33m{text}\033[0m"
-
-        def red(self, text: str) -> str:
-            return f"\033[31m{text}\033[0m"
-
-        def dim(self, text: str) -> str:
-            return f"\033[2m{text}\033[0m"
-
-        def success(self, msg: str) -> None:
-            print(f"{self.badge()} \033[32m✓\033[0m {msg}")
-
-        def info(self, msg: str) -> None:
-            print(f"{self.badge()} \033[36mℹ\033[0m {msg}")
-
-        def warn(self, msg: str) -> None:
-            print(f"{self.badge()} \033[33m⚠\033[0m {msg}")
-
-        def error(self, msg: str) -> None:
-            print(f"{self.badge()} \033[31m✗\033[0m {msg}", file=sys.stderr)
-
-    ui = FallbackUI()  # type: ignore
-
-    def render_panel(
-        title: str,
-        lines: Sequence[str] | str,
-        border_color: str = "0;36",
-        width: int = 76,
-        stream: Any = None,
-        **kwargs: Any,
-    ) -> None:
-        out = stream or sys.stdout
-        body_lines = lines.splitlines() if isinstance(lines, str) else list(lines)
-        box_w = max(40, width)
-        inner_w = box_w - 4
-        title_seg = f" {title} " if title else ""
-        top_fill = max(1, box_w - 3 - len(title) - (2 if title else 0))
-        top = f"\033[{border_color}m╭─\033[0m\033[1m{title_seg}\033[0m\033[{border_color}m{'─' * top_fill}╮\033[0m"
-        bottom = f"\033[{border_color}m╰{'─' * (box_w - 2)}╯\033[0m"
-        side = f"\033[{border_color}m│\033[0m"
-        print(top, file=out)
-        for raw_line in body_lines:
-            import re
-            plain = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", raw_line)
-            pad = " " * max(0, inner_w - len(plain))
-            print(f"{side} {raw_line}{pad} {side}", file=out)
-        print(bottom, file=out)
+from lantern.ui import (
+    add_color_args,
+    handle_color_args,
+    prompt_input,
+    render_panel,
+    select_menu,
+    ui,
+)
 
 
-def find_default_target() -> Path | None:
-    """Find target markdown file in current directory."""
-    cwd = Path.cwd()
-    for candidate in ("explainer.md", "dashboard.md", "index.md", "README.md"):
-        p = cwd / candidate
-        if p.exists():
-            return p
-    md_files = list(cwd.glob("*.md"))
-    if md_files:
-        return sorted(md_files)[0]
-    return None
+def get_usage() -> str:
+    """Returns the Prism-styled help and usage guide matching Snowpack & Borealis."""
+    return f"""{ui.badge()} {ui.bold("Frost's Interactive Explainer & Simulation Dashboard Compiler")}
+
+{ui.blue("Usage:")}
+  lantern                               Open interactive dashboard & quick actions
+  lantern [file] [options]              Compile Markdown into standalone HTML
+  lantern build [file] [options]        Explicit compilation command
+  lantern serve [file] [options]        Spin up live-reloading dev server with SSE browser sync
+  lantern new <name> [options]          Scaffold a new explainer or simulation workspace
+  lantern status                        Display Prism terminal dashboard of active engines
+  lantern list                          List available templates and documents
+
+{ui.blue("Commands:")}
+  new <name>             Scaffold a starter explainer, dashboard, or optimization lab
+  build [file]           Compile Markdown into an optimized HTML document
+  serve [file]           Spin up ephemeral HTTP dev server with browser live-reloading
+  status                 Display Prism telemetry dashboard & engine availability
+  list                   List available templates and detected markdown documents
+
+{ui.blue("Options:")}
+  -o, --output PATH      Specify output HTML filename (default: dist/<name>.html)
+  -t, --template NAME    Layout template: 'explainer' (default), 'dashboard', or 'optimization'
+  --standalone           Inline all CSS, KaTeX math, and JavaScript into a single HTML file
+  -p, --port PORT        Dev server HTTP port (default: 8080)
+  --host HOST            Dev server host (default: 127.0.0.1)
+  --no-open              Do not automatically open browser on launch
+  --color MODE           Color output mode: auto, always, never (default: auto)
+  --no-color             Disable colored output
+  -h, --help             Show this help message and exit
+  -V, -v, --version      Show version information and exit
+
+{ui.blue("Directives Ecosystem:")}
+  • {ui.bold("Layout:")}    ::: grid, ::: card, ::: stepper, ::: curtain
+  • {ui.bold("Controls:")}  ::: slider, ::: switch, ::: segments, ::: select, ::: player
+  • {ui.bold("Content:")}   ::: plot (with lightbox modal), ::: metrics, ::: tabs,
+                  ::: accordion, ::: comparison, ::: callout, [?term: hint]
+
+{ui.blue("Examples:")}
+  lantern                               # Interactive dashboard & quick action menu
+  lantern explainer.md                  # Compile explainer.md -> dist/explainer.html
+  lantern build explainer.md --standalone # Self-contained HTML with inlined assets
+  lantern serve explainer.md            # Live-reloading server at http://127.0.0.1:8080
+  lantern new convex-lab --template optimization # Scaffold domain optimization lab
+  lantern status                        # Inspect Barograph, KaTeX, and directive status
+"""
+
+
+def discover_documents(cwd: Path | None = None) -> list[Path]:
+    """Discovers all Markdown documents in target directory, sorting preferred names first."""
+    base = cwd or Path.cwd()
+    if not base.exists():
+        return []
+    candidates = list(base.glob("*.md"))
+    preferred = ("explainer.md", "dashboard.md", "index.md", "README.md")
+
+    def sort_key(p: Path) -> tuple[int, str]:
+        lower = p.name.lower()
+        if lower in preferred:
+            return (preferred.index(lower), lower)
+        return (len(preferred), lower)
+
+    return sorted(candidates, key=sort_key)
+
+
+def find_default_target(cwd: Path | None = None) -> Path | None:
+    """Finds primary target markdown file in current directory."""
+    docs = discover_documents(cwd)
+    return docs[0] if docs else None
 
 
 def cmd_new(args: argparse.Namespace) -> int:
@@ -112,10 +111,12 @@ def cmd_new(args: argparse.Namespace) -> int:
         opt_template_dir = compiler.template_dir / "optimization"
         if opt_template_dir.exists():
             shutil.copytree(opt_template_dir, target_dir, dirs_exist_ok=True)
-            (target_dir / ".gitignore").write_text("dist/\n__pycache__/\n*.html\n", encoding="utf-8")
+            (target_dir / ".gitignore").write_text(
+                "dist/\n__pycache__/\n*.html\n", encoding="utf-8"
+            )
             ui.success(f"Scaffolded new optimization lab workspace in '{name}/'")
-            print(f"\n  \033[1;36mcd\033[0m {name}")
-            print(f"  \033[1;36mlantern serve\033[0m explainer.md\n")
+            print(f"\n  {ui.bold_cyan('cd')} {name}")
+            print(f"  {ui.bold_cyan('lantern serve')} explainer.md\n")
             return 0
 
     # Sample Barograph plotting script
@@ -223,14 +224,14 @@ Adjust real-time parameters below:
     (target_dir / ".gitignore").write_text("dist/\n__pycache__/\n*.html\n", encoding="utf-8")
 
     ui.success(f"Scaffolded new {template_type} project in '{name}/'")
-    print(f"\n  \033[1;36mcd\033[0m {name}")
-    print(f"  \033[1;36mlantern serve\033[0m {md_file.name}\n")
+    print(f"\n  {ui.bold_cyan('cd')} {name}")
+    print(f"  {ui.bold_cyan('lantern serve')} {md_file.name}\n")
     return 0
 
 
 def cmd_build(args: argparse.Namespace) -> int:
     """Compile Markdown into a self-contained HTML document."""
-    target = args.file
+    target = getattr(args, "file", "")
     if not target:
         target_path = find_default_target()
         if not target_path:
@@ -244,10 +245,10 @@ def cmd_build(args: argparse.Namespace) -> int:
         return 1
 
     compiler = LanternCompiler()
-    template_name = args.template or "explainer"
-    standalone = bool(args.standalone)
+    template_name = getattr(args, "template", None) or "explainer"
+    standalone = bool(getattr(args, "standalone", True))
 
-    out_dest = args.output
+    out_dest = getattr(args, "output", "")
     if not out_dest:
         out_dest = Path.cwd() / "dist" / f"{target_path.stem}.html"
     else:
@@ -255,7 +256,10 @@ def cmd_build(args: argparse.Namespace) -> int:
         if out_p.is_dir() or str(out_dest).endswith(("/", "\\")):
             out_dest = out_p / f"{target_path.stem}.html"
 
-    ui.info(f"Compiling \033[1m{target_path.name}\033[0m (template: {template_name}, standalone: {standalone})")
+    ui.action(
+        f"Compiling {ui.bold(target_path.name)} (template: {template_name}, standalone: {standalone})...",
+        symbol="🏮",
+    )
     try:
         out_file = compiler.compile_file(
             input_path=target_path,
@@ -264,7 +268,12 @@ def cmd_build(args: argparse.Namespace) -> int:
             standalone=standalone,
         )
         size_kb = out_file.stat().st_size / 1024.0
-        ui.success(f"Built \033[1m{out_file.relative_to(Path.cwd()) if out_file.is_relative_to(Path.cwd()) else out_file}\033[0m ({size_kb:.1f} KB)")
+        rel = (
+            out_file.relative_to(Path.cwd())
+            if out_file.is_relative_to(Path.cwd())
+            else out_file
+        )
+        ui.success(f"Built {ui.bold(str(rel))} ({size_kb:.1f} KB)")
         return 0
     except Exception as exc:
         ui.error(f"Compilation failed: {exc}")
@@ -273,7 +282,7 @@ def cmd_build(args: argparse.Namespace) -> int:
 
 def cmd_serve(args: argparse.Namespace) -> int:
     """Spins up dev server with SSE live browser synchronization."""
-    target = args.file
+    target = getattr(args, "file", "")
     if not target:
         target_path = find_default_target()
         if not target_path:
@@ -286,10 +295,10 @@ def cmd_serve(args: argparse.Namespace) -> int:
         ui.error(f"File not found: {target_path}")
         return 1
 
-    port = int(args.port or 8080)
-    host = args.host or "127.0.0.1"
-    template_name = args.template or "explainer"
-    no_open = bool(args.no_open)
+    port = int(getattr(args, "port", None) or 8080)
+    host = getattr(args, "host", None) or "127.0.0.1"
+    template_name = getattr(args, "template", None) or "explainer"
+    no_open = bool(getattr(args, "no_open", False))
 
     server = LanternDevServer(
         target_file=target_path,
@@ -300,15 +309,15 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     url = f"http://{server.host}:{server.port}"
     lines = [
-        f"URL:          \033[1;36m{url}\033[0m",
-        f"Target:       \033[1m{target_path.name}\033[0m",
+        f"URL:          {ui.bold_cyan(url)}",
+        f"Target:       {ui.bold(target_path.name)}",
         f"Template:     {template_name}",
-        f"Live Reload:  \033[32mActive (SSE /_lantern/events)\033[0m",
+        f"Live Reload:  {ui.green('Active (SSE /_lantern/events)')}",
         f"Watching:     {target_path.parent}",
         "",
-        "\033[2mPress Ctrl+C to stop dev server\033[0m",
+        ui.dim("Press Ctrl+C to stop dev server"),
     ]
-    render_panel(title="🏮 Lantern Live Dev Server", lines=lines, border_color="1;36")
+    ui.panel("🏮 Lantern Live Dev Server", lines, border_color="1;36")
 
     try:
         server.start(open_browser=not no_open)
@@ -317,129 +326,346 @@ def cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_status(args: argparse.Namespace) -> int:
+def cmd_status(args: argparse.Namespace | None = None) -> int:
     """Display system status dashboard, engine availability, and active templates."""
-    barograph_status = "\033[31m✘ Not installed\033[0m"
+    barograph_status = ui.red("✘ Not installed")
     try:
         import barograph  # type: ignore
 
         baro_ver = getattr(barograph, "__version__", "available")
-        barograph_status = f"\033[32m✓ In-process available (v{baro_ver})\033[0m"
+        barograph_status = ui.green(f"✓ In-process available (v{baro_ver})")
     except ImportError:
         import shutil
-        if shutil.which("barograph"):
-            barograph_status = "\033[33m✓ CLI available in PATH (subprocess mode)\033[0m"
 
-    prism_status = "\033[32m✓ Loaded\033[0m" if "prism" in sys.modules else "\033[33mANSI Fallback\033[0m"
+        if shutil.which("barograph"):
+            barograph_status = ui.yellow("✓ CLI available in PATH (subprocess mode)")
+
+    try:
+        import prism  # type: ignore
+
+        prism_ver = getattr(prism, "__version__", "loaded")
+        prism_status = ui.green(f"✓ Native Prism active (v{prism_ver})")
+    except ImportError:
+        prism_status = ui.yellow("ANSI Fallback")
 
     compiler = LanternCompiler()
-    templates = [p.stem.replace(".html", "") for p in compiler.template_dir.glob("*.html.j2") if not p.name.startswith("base")]
+    templates = [
+        p.stem.replace(".html", "")
+        for p in compiler.template_dir.glob("*.html.j2")
+        if not p.name.startswith("base")
+    ]
 
     lines = [
-        f"Lantern:       \033[1;36mv{__version__}\033[0m ({Path(__file__).parent})",
+        f"Lantern:       {ui.bold_cyan(f'v{__version__}')} ({Path(__file__).parent})",
         f"Python:        {platform.python_version()} ({sys.executable})",
         f"Platform:      {platform.system()} {platform.machine()}",
         "",
-        "\033[1mEngines & Integrations:\033[0m",
+        ui.bold("Engines & Integrations:"),
         f"  • Barograph:   {barograph_status}",
         f"  • Prism UI:    {prism_status}",
-        f"  • KaTeX Math:  \033[32m✓ Bundled local\033[0m",
-        f"  • Directives:  \033[32m✓ Enabled (3 Families)\033[0m",
+        f"  • KaTeX Math:  {ui.green('✓ Bundled local')}",
+        f"  • Directives:  {ui.green('✓ Enabled (3 Families)')}",
         "    - Layout:    grid, card, stepper, curtain",
         "    - Controls:  slider, switch, segments, select, player",
         "    - Content:   plot, metrics, tabs, accordion, comparison, callout",
         "",
-        "\033[1mAvailable Templates:\033[0m",
+        ui.bold("Available Templates:"),
     ]
     for tmpl in templates:
-        lines.append(f"  • \033[1m{tmpl}\033[0m")
+        lines.append(f"  • {ui.bold(tmpl)}")
     if (compiler.template_dir / "optimization").exists():
-        lines.append("  • \033[1moptimization\033[0m (domain lab starter)")
+        lines.append(f"  • {ui.bold('optimization')} (domain lab starter)")
 
-    target = find_default_target()
-    if target:
-        lines.extend(["", f"\033[1mActive Document:\033[0m {target.name} ({target.parent})"])
+    docs = discover_documents()
+    if docs:
+        lines.extend(["", f"{ui.bold('Active Document:')} {docs[0].name} ({docs[0].parent})"])
+        if len(docs) > 1:
+            lines.append(f"{ui.dim('Workspace Files:')} {', '.join(d.name for d in docs)}")
 
-    render_panel(title="🏮 Lantern Status Dashboard", lines=lines, border_color="1;36")
+    ui.panel("🏮 LANTERN STATUS DASHBOARD", lines, border_color="1;36")
     return 0
 
 
-def cmd_list(args: argparse.Namespace) -> int:
+def cmd_list(args: argparse.Namespace | None = None) -> int:
     """List available templates and detected markdown documents."""
     compiler = LanternCompiler()
-    templates = [p.stem.replace(".html", "") for p in compiler.template_dir.glob("*.html.j2") if not p.name.startswith("base")]
+    templates = [
+        p.stem.replace(".html", "")
+        for p in compiler.template_dir.glob("*.html.j2")
+        if not p.name.startswith("base")
+    ]
 
     print(f"\n{ui.badge()} {ui.bold('Templates & Workspaces')}")
-    print(f"\n\033[1mTemplates:\033[0m")
+    print(f"\n{ui.bold('Templates:')}")
     for t in templates:
         print(f"  • {t}")
     if (compiler.template_dir / "optimization").exists():
         print("  • optimization")
 
-    mds = list(Path.cwd().glob("*.md"))
-    print(f"\n\033[1mDocuments in {Path.cwd().name}/:\033[0m")
-    if mds:
-        for m in sorted(mds):
-            print(f"  • {m.name}")
+    docs = discover_documents()
+    print(f"\n{ui.bold(f'Documents in {Path.cwd().name}/:')}")
+    if docs:
+        for m in docs:
+            size_kb = m.stat().st_size / 1024.0
+            print(f"  • {ui.bold_cyan(m.name)} {ui.dim(f'({size_kb:.1f} KB)')}")
     else:
-        print("  (No .md documents found)")
+        print(f"  {ui.dim('(No .md documents found)')}")
     print()
     return 0
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """Main CLI entrypoint."""
+def run_interactive_hub(docs: list[Path]) -> int:
+    """Provides interactive quick actions menu when Lantern is run with no arguments."""
+    actions: list[tuple[str, str, str]] = []
+
+    if docs:
+        first = docs[0]
+        actions.append(
+            (
+                "serve_first",
+                f"Serve & live-reload '{first.name}'",
+                "Spins up dev server with SSE live browser sync",
+            )
+        )
+        actions.append(
+            (
+                "build_first",
+                f"Compile '{first.name}' to standalone HTML",
+                "Inlines CSS, KaTeX math, and JavaScript into self-contained file",
+            )
+        )
+        if len(docs) > 1:
+            actions.append(
+                (
+                    "select_serve",
+                    "Pick document to live-serve...",
+                    f"{len(docs)} markdown files discovered",
+                )
+            )
+            actions.append(
+                (
+                    "select_build",
+                    "Pick document to compile...",
+                    f"{len(docs)} markdown files discovered",
+                )
+            )
+    else:
+        actions.append(
+            (
+                "build_custom",
+                "Compile a markdown document...",
+                "Specify a custom file path to compile",
+            )
+        )
+        actions.append(
+            (
+                "serve_custom",
+                "Serve & live-reload a document...",
+                "Live reload a specific document path",
+            )
+        )
+
+    actions.append(
+        (
+            "new",
+            "Scaffold new explainer or simulation workspace",
+            "Generate explainer, dashboard, or optimization lab project",
+        )
+    )
+    actions.append(
+        (
+            "list",
+            "List available templates & documents",
+            "Display installed templates and workspace files",
+        )
+    )
+    actions.append(("exit", "Exit", "Close Lantern"))
+
+    choice = ui.select("Lantern Quick Actions:", actions)
+
+    if choice == "exit" or not choice:
+        return 0
+
+    if choice == "serve_first" and docs:
+        args = argparse.Namespace(file=str(docs[0]), port=8080, host="127.0.0.1", template="", no_open=False)
+        return cmd_serve(args)
+
+    if choice == "build_first" and docs:
+        args = argparse.Namespace(file=str(docs[0]), output="", standalone=True, template="")
+        return cmd_build(args)
+
+    if choice == "select_serve" and docs:
+        options = [
+            (str(d), f"📄 {d.name}", f"{d.stat().st_size:,} bytes") for d in docs
+        ]
+        target = ui.select("Select document to serve:", options)
+        if not target:
+            return 0
+        args = argparse.Namespace(file=target, port=8080, host="127.0.0.1", template="", no_open=False)
+        return cmd_serve(args)
+
+    if choice == "select_build" and docs:
+        options = [
+            (str(d), f"📄 {d.name}", f"{d.stat().st_size:,} bytes") for d in docs
+        ]
+        target = ui.select("Select document to compile:", options)
+        if not target:
+            return 0
+        args = argparse.Namespace(file=target, output="", standalone=True, template="")
+        return cmd_build(args)
+
+    if choice == "build_custom":
+        target = ui.prompt("Document path to compile (.md)", default="explainer.md")
+        if not Path(target).exists():
+            ui.error(f"File not found: '{target}'")
+            return 1
+        args = argparse.Namespace(file=target, output="", standalone=True, template="")
+        return cmd_build(args)
+
+    if choice == "serve_custom":
+        target = ui.prompt("Document path to serve (.md)", default="explainer.md")
+        if not Path(target).exists():
+            ui.error(f"File not found: '{target}'")
+            return 1
+        args = argparse.Namespace(file=target, port=8080, host="127.0.0.1", template="", no_open=False)
+        return cmd_serve(args)
+
+    if choice == "new":
+        tmpl = ui.select(
+            "Select starter template:",
+            [
+                ("explainer", "Scientific Explainer", "Narrative deep-dive with 3D plot and parameter lab"),
+                ("dashboard", "Simulation Dashboard", "Multi-method simulation deck with control center"),
+                ("optimization", "Domain Optimization Lab", "Canvas descent walker, barrier boundary lab, Rosenbrock surface"),
+            ],
+        )
+        if not tmpl:
+            return 0
+        name = ui.prompt("Project / workspace directory name", default=f"my_{tmpl}")
+        args = argparse.Namespace(name=name, template=tmpl)
+        return cmd_new(args)
+
+    if choice == "list":
+        return cmd_list(None)
+
+    return 0
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """Constructs argument parser for subcommands."""
     parser = argparse.ArgumentParser(
         prog="lantern",
-        description="Frost's Interactive Explainer and Simulation Dashboard Compiler",
+        add_help=False,
     )
-    parser.add_argument("-v", "--version", action="version", version=f"lantern {__version__}")
+    parser.add_argument("-v", "-V", "--version", action="store_true", help="Show version")
+    parser.add_argument("-h", "--help", action="store_true", help="Show help")
+    add_color_args(parser)
 
-    subparsers = parser.add_subparsers(dest="command", help="Lantern commands")
+    subparsers = parser.add_subparsers(dest="command")
 
     # new
-    p_new = subparsers.add_parser("new", help="Scaffold a new explainer or simulation workspace")
-    p_new.add_argument("name", help="Workspace / project directory name")
-    p_new.add_argument("--template", choices=["explainer", "dashboard", "optimization"], default="explainer", help="Starter template type")
+    p_new = subparsers.add_parser("new", add_help=False)
+    p_new.add_argument("name", nargs="?", default="", help="Workspace directory name")
+    p_new.add_argument("--template", "-t", choices=["explainer", "dashboard", "optimization"], default="explainer")
+    p_new.add_argument("-h", "--help", action="store_true")
 
     # build
-    p_build = subparsers.add_parser("build", help="Compile Markdown into an optimized HTML document")
-    p_build.add_argument("file", nargs="?", default="", help="Input markdown document (defaults to explainer.md / dashboard.md)")
-    p_build.add_argument("-o", "--output", default="", help="Output HTML file or directory (default: dist/<name>.html)")
-    p_build.add_argument("--standalone", action="store_true", help="Inline all CSS, KaTeX, and JS into a single standalone HTML file")
-    p_build.add_argument("--template", choices=["explainer", "dashboard"], default="", help="Layout template override")
+    p_build = subparsers.add_parser("build", add_help=False)
+    p_build.add_argument("file", nargs="?", default="", help="Input markdown document")
+    p_build.add_argument("-o", "--output", default="", help="Output HTML destination")
+    p_build.add_argument("--standalone", action="store_true", default=True, help="Inline all CSS, KaTeX, and JS")
+    p_build.add_argument("--template", "-t", default="", help="Layout template override")
+    p_build.add_argument("-h", "--help", action="store_true")
 
     # serve
-    p_serve = subparsers.add_parser("serve", help="Spin up local live-reloading dev server with SSE browser sync")
+    p_serve = subparsers.add_parser("serve", add_help=False)
     p_serve.add_argument("file", nargs="?", default="", help="Markdown document to watch and serve")
-    p_serve.add_argument("-p", "--port", type=int, default=8080, help="HTTP port (default: 8080)")
-    p_serve.add_argument("--host", default="127.0.0.1", help="HTTP host (default: 127.0.0.1)")
-    p_serve.add_argument("--no-open", action="store_true", help="Do not automatically open browser on launch")
-    p_serve.add_argument("--template", choices=["explainer", "dashboard"], default="", help="Template override")
+    p_serve.add_argument("-p", "--port", type=int, default=8080, help="HTTP port")
+    p_serve.add_argument("--host", default="127.0.0.1", help="HTTP host")
+    p_serve.add_argument("--no-open", action="store_true", help="Do not open browser")
+    p_serve.add_argument("--template", "-t", default="", help="Template override")
+    p_serve.add_argument("-h", "--help", action="store_true")
 
     # status
-    subparsers.add_parser("status", help="Display Prism terminal dashboard of active engines and templates")
+    p_status = subparsers.add_parser("status", add_help=False)
+    p_status.add_argument("-h", "--help", action="store_true")
 
     # list
-    subparsers.add_parser("list", help="List available templates and documents")
+    p_list = subparsers.add_parser("list", add_help=False)
+    p_list.add_argument("-h", "--help", action="store_true")
 
-    args = parser.parse_args(argv)
+    return parser
 
-    if not args.command:
-        return cmd_status(args)
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Main CLI entrypoint for Lantern."""
+    raw_args = list(argv) if argv is not None else sys.argv[1:]
+    handle_color_args(raw_args)
+
+    # Global help intercept
+    if any(a in ("-h", "--help", "help") for a in raw_args):
+        print(get_usage())
+        return 0
+
+    # Global version intercept
+    if any(a in ("-V", "-v", "--version", "version") for a in raw_args) and len(raw_args) == 1:
+        print(f"{ui.badge()} {ui.bold(f'v{__version__}')}")
+        return 0
+
+    # When run without arguments: display dashboard and interactive hub
+    if not raw_args:
+        cmd_status()
+        docs = discover_documents()
+        if sys.stdin.isatty():
+            return run_interactive_hub(docs)
+        return 0
+
+    cmd = raw_args[0]
+
+    # Handle direct document compilation without explicit 'build' keyword
+    # e.g., 'lantern explainer.md' or 'lantern explainer.md --standalone'
+    known_commands = ("new", "build", "serve", "status", "list")
+    if cmd not in known_commands and not cmd.startswith("-"):
+        p = Path(cmd)
+        if p.suffix == ".md" or p.exists():
+            build_raw = ["build"] + raw_args
+            return main(build_raw)
+
+    parser = _build_parser()
+    args, _ = parser.parse_known_args(raw_args)
+
+    if getattr(args, "help", False):
+        print(get_usage())
+        return 0
+
+    if getattr(args, "version", False):
+        print(f"{ui.badge()} {ui.bold(f'v{__version__}')}")
+        return 0
 
     if args.command == "new":
+        if not args.name:
+            if sys.stdin.isatty():
+                args.name = ui.prompt("Workspace directory name", default="my_explainer")
+            else:
+                ui.error("Missing required argument: <name>")
+                return 1
         return cmd_new(args)
+
     elif args.command == "build":
         return cmd_build(args)
+
     elif args.command == "serve":
         return cmd_serve(args)
+
     elif args.command == "status":
         return cmd_status(args)
+
     elif args.command == "list":
         return cmd_list(args)
 
-    return 0
+    else:
+        print(get_usage())
+        return 1
 
 
 if __name__ == "__main__":
