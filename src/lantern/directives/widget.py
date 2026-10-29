@@ -74,7 +74,7 @@ class WidgetBlockProcessor(BlockProcessor):
     </div>
   </div>
   <div class="lantern-plot-content lantern-widget-content" style="min-height: {height}; position: relative; padding: 0;">
-    <canvas class="lantern-widget-canvas" id="canvas-{widget_id}" style="width: 100%; height: {height}; display: block;"></canvas>
+    <canvas class="lantern-widget-canvas" id="canvas-{widget_id}" style="width: 100%; height: 100%; min-height: {height}; display: block;"></canvas>
   </div>
   <script>
   (function() {{
@@ -121,6 +121,8 @@ class WidgetBlockProcessor(BlockProcessor):
 """
 
         placeholder = self.parser.md.htmlStash.store(widget_html)
-        p = etree.SubElement(parent, "div")
-        p.text = placeholder
+        if len(parent):
+            parent[-1].tail = (parent[-1].tail or "") + f"\n{placeholder}\n"
+        else:
+            parent.text = (parent.text or "") + f"\n{placeholder}\n"
         return True

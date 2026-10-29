@@ -86,7 +86,7 @@ class MathPlotBlockProcessor(BlockProcessor):
     </div>
   </div>
   <div class="lantern-plot-content" style="min-height: {height}; position: relative; padding: 0;">
-    <canvas class="lantern-math-canvas" id="canvas-{plot_id}" style="width: 100%; height: {height}; display: block;"></canvas>
+    <canvas class="lantern-math-canvas" id="canvas-{plot_id}" style="width: 100%; height: 100%; min-height: {height}; display: block;"></canvas>
   </div>
   <script>
   (function() {{
@@ -290,6 +290,8 @@ class MathPlotBlockProcessor(BlockProcessor):
 """
 
         placeholder = self.parser.md.htmlStash.store(plot_html)
-        p = etree.SubElement(parent, "div")
-        p.text = placeholder
+        if len(parent):
+            parent[-1].tail = (parent[-1].tail or "") + f"\n{placeholder}\n"
+        else:
+            parent.text = (parent.text or "") + f"\n{placeholder}\n"
         return True

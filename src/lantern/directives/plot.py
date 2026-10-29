@@ -97,8 +97,10 @@ class PlotBlockProcessor(BlockProcessor):
             self.compiler.has_plotly = True
 
         placeholder = self.parser.md.htmlStash.store(plot_html)
-        p = etree.SubElement(parent, "div")
-        p.text = placeholder
+        if len(parent):
+            parent[-1].tail = (parent[-1].tail or "") + f"\n{placeholder}\n"
+        else:
+            parent.text = (parent.text or "") + f"\n{placeholder}\n"
         return True
 
     def _render_plot(
