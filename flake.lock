@@ -11,11 +11,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793120255,
-        "narHash": "sha256-QRCk8yA2o0ugz/LeoMPiYO/dss6RWnugBJh2+dLpuzk=",
+        "lastModified": 1793230273,
+        "narHash": "sha256-qzK8+ugIT64ddii93IBYHF+xxp45xoQC6hf0kentcT8=",
         "owner": "SpanishSyntax",
         "repo": "Barograph",
-        "rev": "af74359c4bb347f527f687ceb19b69a168114835",
+        "rev": "4cf33c163ce2f33a22590f7aeaa12e174044d1fc",
         "type": "github"
       },
       "original": {
@@ -102,11 +102,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793123855,
-        "narHash": "sha256-szdvWLnr8z6gH1oAW1XSxb2cRRpFp9O73l/THyUuEVc=",
+        "lastModified": 1793293976,
+        "narHash": "sha256-ULgVc8Z3729lJjZ2RQbftBTrPrf1Xq2iskxV1wO9wW4=",
         "owner": "SpanishSyntax",
         "repo": "Prism",
-        "rev": "17b4f8762a8a1cac061e5e9e48fc66c894f93450",
+        "rev": "9f2754e8ca152af58caff3ecaae1eba97e5a1576",
         "type": "github"
       },
       "original": {
