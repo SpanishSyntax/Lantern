@@ -336,3 +336,33 @@ fig = MockPlotlyFig()
     html_out = compiler.compile(md, base_dir=tmp_path)
     assert "lantern-plot-wrapper" in html_out
     assert "data-uirevision='lantern-persist'" in html_out
+
+
+def test_widget_directive():
+    compiler = LanternCompiler()
+    md = """
+::: widget id="cart-lab" height=320px title="Cart Simulation"
+const w = canvas._logicalWidth;
+ctx.fillStyle = theme.cyan;
+ctx.fillRect(10, 10, 50, 50);
+:::
+"""
+    html_out = compiler.compile(md)
+    assert 'class="lantern-plot-wrapper lantern-widget-wrapper"' in html_out
+    assert 'id="cart-lab"' in html_out
+    assert 'Cart Simulation' in html_out
+    assert 'canvas-cart-lab' in html_out
+    assert 'ctx.fillRect(10, 10, 50, 50);' in html_out
+
+
+def test_math_plot_directive():
+    compiler = LanternCompiler()
+    md = """
+::: math-plot fn="Math.sin(omega * x)" domain="0, 10" height=300px title="Harmonic Wave"
+:::
+"""
+    html_out = compiler.compile(md)
+    assert 'class="lantern-plot-wrapper lantern-math-plot-wrapper"' in html_out
+    assert 'Harmonic Wave' in html_out
+    assert 'canvas-lantern-math-plot-' in html_out
+    assert 'Math.sin(omega * x)' in html_out

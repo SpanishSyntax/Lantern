@@ -54,7 +54,9 @@ Lantern extends Python-Markdown with built-in obsidian-styled components and rea
 - **`::: player id="..." target="..." speeds="0.5x, 1x, 2x, 5x"`**: Media scrub bar with reset, play/pause, step controls.
 
 ### ⚡ Editorial & Visual Content
-- **`::: plot <script.py> [backend=plotly|svg] [height=500px] [title="..."]`**: In-process Barograph execution with Plotly interactive embeds or vector SVG.
+- **`::: plot <script.py> [backend=plotly|svg] [height=500px] [title="..."]`**: In-process Barograph execution with Plotly interactive embeds or vector SVG. Auto-syncs with sliders when using Plotly frames.
+- **`::: math-plot fn="..." [domain="min, max"] [height=360px] [title="..."]`**: Instant client-side 60 FPS mathematical formula evaluator with reactive slider parameters.
+- **`::: widget [id="..."] [height=360px] [title="..."]`**: Composable generative sandbox for custom physics, animations, and interactive models.
 - **`::: tabs`**: Tab switcher with `=== Tab Name` panes.
 - **`::: accordion title="..." [open=true|false]`**: Collapsible technical proof or appendix card.
 - **`::: metrics [cols=2|3|4]`**: KPI status readout strip with `- Key: Value [badge=emerald|cyan|purple|amber|rose]`.

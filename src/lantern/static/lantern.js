@@ -6,8 +6,36 @@
 (function () {
   'use strict';
 
-  // Global Lantern namespace
+  // Global Lantern namespace & reactive state store
   window.lantern = window.lantern || {};
+  window.lantern.params = window.lantern.params || {};
+  window.lantern._listeners = window.lantern._listeners || {};
+
+  window.lantern.onInput = function (id, callback) {
+    window.lantern._listeners[id] = window.lantern._listeners[id] || [];
+    window.lantern._listeners[id].push(callback);
+    if (id in window.lantern.params) {
+      try { callback(window.lantern.params[id]); } catch (e) { console.error(e); }
+    }
+  };
+
+  window.lantern.get = function (id, defaultVal) {
+    return (id in window.lantern.params) ? window.lantern.params[id] : defaultVal;
+  };
+
+  window.lantern.theme = {
+    cyan: '#06b6d4',
+    purple: '#a855f7',
+    emerald: '#10b981',
+    amber: '#f59e0b',
+    rose: '#f43f5e',
+    blue: '#3b82f6',
+    bgCard: '#0f172a',
+    bgSurface: '#1e293b',
+    border: '#334155',
+    textPrimary: '#f8fafc',
+    textSecondary: '#94a3b8'
+  };
 
   // =========================================================================
   // 1. Toast Notification System
@@ -186,15 +214,78 @@
   }
 
   // =========================================================================
-  // 4. Lab Atoms & Control Event Dispatch
+  // 4. Lab Atoms, Control Event Dispatch & Automated Plotly Reactive Bridge
   // =========================================================================
+  function syncPlotlyFrames(id, value) {
+    if (!window.Plotly) return;
+    const graphs = document.querySelectorAll('.plotly-graph-div');
+    graphs.forEach(gd => {
+      const frames = (gd._transitionData && gd._transitionData._frames) || gd._frames;
+      if (!frames || !frames.length) return;
+
+      let bestFrame = null;
+      let minDiff = Infinity;
+      const numVal = parseFloat(value);
+
+      for (let i = 0; i < frames.length; i++) {
+        const f = frames[i];
+        const name = String(f.name || '');
+
+        if (name.startsWith(`${id}:`)) {
+          const frameNum = parseFloat(name.substring(id.length + 1));
+          if (!isNaN(frameNum) && !isNaN(numVal)) {
+            const diff = Math.abs(frameNum - numVal);
+            if (diff < minDiff) {
+              minDiff = diff;
+              bestFrame = name;
+            }
+          } else if (name.substring(id.length + 1) === String(value)) {
+            bestFrame = name;
+            break;
+          }
+        } else if (!isNaN(parseFloat(name)) && !isNaN(numVal)) {
+          const frameNum = parseFloat(name);
+          const diff = Math.abs(frameNum - numVal);
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestFrame = name;
+          }
+        } else if (name === String(value)) {
+          bestFrame = name;
+          break;
+        }
+      }
+
+      if (bestFrame !== null) {
+        try {
+          window.Plotly.animate(gd, [bestFrame], {
+            mode: 'immediate',
+            frame: { duration: 0, redraw: false },
+            transition: { duration: 0 }
+          });
+        } catch (e) {
+          // Ignore transient animation locks
+        }
+      }
+    });
+  }
+
   function dispatchControlEvent(id, value) {
+    window.lantern.params[id] = value;
     window.dispatchEvent(
       new CustomEvent('lantern:input', {
         detail: { id, value },
         bubbles: true
       })
     );
+
+    if (window.lantern._listeners && window.lantern._listeners[id]) {
+      window.lantern._listeners[id].forEach(cb => {
+        try { cb(value); } catch (e) { console.error(e); }
+      });
+    }
+
+    syncPlotlyFrames(id, value);
   }
 
   function initSliders() {
@@ -205,6 +296,9 @@
       const unit = slider.dataset.unit || '';
 
       if (!slider) return;
+
+      // Register initial value
+      window.lantern.params[id] = parseFloat(slider.value);
 
       slider.addEventListener('input', () => {
         if (valBadge) valBadge.textContent = `${slider.value}${unit}`;
@@ -220,6 +314,9 @@
 
       if (!cb) return;
 
+      // Register initial value
+      window.lantern.params[id] = cb.checked;
+
       cb.addEventListener('change', () => {
         dispatchControlEvent(id, cb.checked);
       });
@@ -231,6 +328,11 @@
       const id = wrap.dataset.controlId;
       const hidden = wrap.querySelector('input[type="hidden"]');
       const buttons = wrap.querySelectorAll('.lantern-segment-btn');
+
+      const activeBtn = wrap.querySelector('.lantern-segment-btn.active');
+      if (activeBtn) {
+        window.lantern.params[id] = activeBtn.dataset.val;
+      }
 
       buttons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -250,6 +352,9 @@
       const id = wrap.dataset.controlId || sel.name;
 
       if (!sel) return;
+
+      // Register initial value
+      window.lantern.params[id] = sel.value;
 
       sel.addEventListener('change', () => {
         dispatchControlEvent(id, sel.value);

@@ -16,6 +16,7 @@ from lantern.directives.card import CardBlockProcessor
 from lantern.directives.comparison import ComparisonBlockProcessor
 from lantern.directives.curtain import CurtainBlockProcessor
 from lantern.directives.grid import GridBlockProcessor
+from lantern.directives.math_plot import MathPlotBlockProcessor
 from lantern.directives.metrics import MetricsBlockProcessor
 from lantern.directives.player import PlayerBlockProcessor
 from lantern.directives.plot import PlotBlockProcessor
@@ -25,6 +26,7 @@ from lantern.directives.slider import SliderBlockProcessor
 from lantern.directives.stepper import StepperBlockProcessor
 from lantern.directives.switch import SwitchBlockProcessor
 from lantern.directives.tabs import TabsBlockProcessor
+from lantern.directives.widget import WidgetBlockProcessor
 
 
 class TooltipInlineProcessor(InlineProcessor):
@@ -66,11 +68,13 @@ class LanternExtension(Extension):
             "lantern_plot",
             111,
         )
-        md.parser.blockprocessors.register(SliderBlockProcessor(md.parser), "lantern_slider", 110)
-        md.parser.blockprocessors.register(SwitchBlockProcessor(md.parser), "lantern_switch", 109)
-        md.parser.blockprocessors.register(SegmentsBlockProcessor(md.parser), "lantern_segments", 108)
-        md.parser.blockprocessors.register(SelectBlockProcessor(md.parser), "lantern_select", 107)
-        md.parser.blockprocessors.register(PlayerBlockProcessor(md.parser), "lantern_player", 106)
+        md.parser.blockprocessors.register(MathPlotBlockProcessor(md.parser), "lantern_math_plot", 110)
+        md.parser.blockprocessors.register(WidgetBlockProcessor(md.parser), "lantern_widget", 109)
+        md.parser.blockprocessors.register(SliderBlockProcessor(md.parser), "lantern_slider", 108)
+        md.parser.blockprocessors.register(SwitchBlockProcessor(md.parser), "lantern_switch", 107)
+        md.parser.blockprocessors.register(SegmentsBlockProcessor(md.parser), "lantern_segments", 106)
+        md.parser.blockprocessors.register(SelectBlockProcessor(md.parser), "lantern_select", 105)
+        md.parser.blockprocessors.register(PlayerBlockProcessor(md.parser), "lantern_player", 104)
 
         # Register inline tooltip processor [?term: definition text]
         TOOLTIP_PATTERN = r"\[\?(?P<term>[^:\n]+):\s*(?P<def>[^\]\n]+)\]"
@@ -89,6 +93,8 @@ __all__ = [
     "CurtainBlockProcessor",
     "MetricsBlockProcessor",
     "PlotBlockProcessor",
+    "MathPlotBlockProcessor",
+    "WidgetBlockProcessor",
     "SliderBlockProcessor",
     "SwitchBlockProcessor",
     "SegmentsBlockProcessor",
