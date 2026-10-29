@@ -85,15 +85,14 @@
   <div class="lantern-toast-container"></div>
 
   <!-- Footer -->
-  {% if footer or author or date %}
   <footer class="lantern-footer">
     <div class="lantern-container">
-      {% if footer %}<p>{{ footer }}</p>{% endif %}
-      {% if author %}<p>{{ author }}</p>{% endif %}
+      <p>Compiled with <strong>Lantern</strong> — Frost's Interactive Explainer & Simulation Compiler.</p>
+      {% if footer %}<p style="margin-top: 0.3rem;">{{ footer }}</p>{% endif %}
+      {% if author %}<p style="margin-top: 0.3rem;">{{ author }}</p>{% endif %}
       {% if date %}<p style="margin-top: 0.3rem;">{{ date }}</p>{% endif %}
     </div>
   </footer>
-  {% endif %}
 
   {# Lantern Core Client Runtime #}
   {% if standalone %}
