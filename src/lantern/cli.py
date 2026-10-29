@@ -24,13 +24,38 @@ from lantern.ui import (
 
 
 def get_usage() -> str:
-    """Returns the Prism-styled help and usage guide matching Snowpack & Borealis."""
+    """Returns the Prism-styled help and usage guide matching Snowpack & Borealis, or compact agent guide."""
+    if ui.is_agent:
+        return f"""Lantern v{__version__} - Frost Explainer & Simulation Dashboard Compiler
+Usage: lantern [command] [file.md] [options]
+
+Commands:
+  new <name> [-t explainer|dashboard|optimization]
+  build [file] [-o out.html] [--standalone] [-t template]
+  export [file] [-o dist/] [--format static|jinja] [-t template]
+  serve [file] [-p port] [--host host] [--no-open]
+  status [--json]
+  list [--json]
+
+Options:
+  --agent, -A            Compact machine/agent friendly output
+  --json                 Structured JSON output
+  -o, --output PATH      Output destination file or directory
+  -t, --template NAME    Template name (default: explainer)
+  --standalone           Inline all CSS, KaTeX, and JS into single file
+  -p, --port PORT        Dev server port (default: 8080)
+  --no-open              Do not auto-open browser
+  -h, --help             Show this help message
+  -v, --version          Show version number
+"""
+
     return f"""{ui.badge()} {ui.bold("Frost's Interactive Explainer & Simulation Dashboard Compiler")}
 
 {ui.blue("Usage:")}
   lantern                               Open interactive dashboard & quick actions
   lantern [file] [options]              Compile Markdown into standalone HTML
   lantern build [file] [options]        Explicit compilation command
+  lantern export [file] [options]       Export deployable static bundle or Jinja2 server project
   lantern serve [file] [options]        Spin up live-reloading dev server with SSE browser sync
   lantern new <name> [options]          Scaffold a new explainer or simulation workspace
   lantern status                        Display Prism terminal dashboard of active engines
@@ -39,17 +64,21 @@ def get_usage() -> str:
 {ui.blue("Commands:")}
   new <name>             Scaffold a starter explainer, dashboard, or optimization lab
   build [file]           Compile Markdown into an optimized HTML document
+  export [file]          Export static bundle or standalone Jinja2 web application project
   serve [file]           Spin up ephemeral HTTP dev server with browser live-reloading
   status                 Display Prism telemetry dashboard & engine availability
   list                   List available templates and detected markdown documents
 
 {ui.blue("Options:")}
-  -o, --output PATH      Specify output HTML filename (default: dist/<name>.html)
+  -o, --output PATH      Specify output HTML filename or export directory
   -t, --template NAME    Layout template: 'explainer' (default), 'dashboard', or 'optimization'
+  --format FORMAT        Export format for 'export': 'static' (default) or 'jinja'
   --standalone           Inline all CSS, KaTeX math, and JavaScript into a single HTML file
   -p, --port PORT        Dev server HTTP port (default: 8080)
   --host HOST            Dev server host (default: 127.0.0.1)
   --no-open              Do not automatically open browser on launch
+  --agent, -A            Compact machine/agent friendly output mode
+  --json                 Output structured JSON payloads for agent/MCP tooling
   --color MODE           Color output mode: auto, always, never (default: auto)
   --no-color             Disable colored output
   -h, --help             Show this help message and exit
@@ -65,9 +94,11 @@ def get_usage() -> str:
   lantern                               # Interactive dashboard & quick action menu
   lantern explainer.md                  # Compile explainer.md -> dist/explainer.html
   lantern build explainer.md --standalone # Self-contained HTML with inlined assets
+  lantern export explainer.md           # Self-contained static bundle with Nginx/Caddy config
+  lantern export explainer.md --format jinja # Standalone Python Jinja2 project with Dockerfile
   lantern serve explainer.md            # Live-reloading server at http://127.0.0.1:8080
   lantern new convex-lab --template optimization # Scaffold domain optimization lab
-  lantern status                        # Inspect Barograph, KaTeX, and directive status
+  lantern status --agent                # Machine-friendly status output
 """
 
 
@@ -244,6 +275,13 @@ def cmd_build(args: argparse.Namespace) -> int:
         ui.error(f"File not found: {target_path}")
         return 1
 
+    # Large Markdown safeguard & telemetry
+    size_bytes = target_path.stat().st_size
+    if size_bytes > 2 * 1024 * 1024:
+        ui.info(
+            f"Large document detected ({size_bytes / (1024 * 1024):.1f} MB); activating optimized streaming parser..."
+        )
+
     compiler = LanternCompiler()
     template_name = getattr(args, "template", None) or "explainer"
     standalone = bool(getattr(args, "standalone", True))
@@ -273,10 +311,100 @@ def cmd_build(args: argparse.Namespace) -> int:
             if out_file.is_relative_to(Path.cwd())
             else out_file
         )
+
+        if ui.is_json:
+            import json
+
+            print(
+                json.dumps(
+                    {
+                        "status": "ok",
+                        "target": str(target_path),
+                        "output": str(out_file),
+                        "size_bytes": out_file.stat().st_size,
+                        "template": template_name,
+                        "standalone": standalone,
+                    }
+                )
+            )
+            return 0
+
         ui.success(f"Built {ui.bold(str(rel))} ({size_kb:.1f} KB)")
         return 0
     except Exception as exc:
         ui.error(f"Compilation failed: {exc}")
+        return 1
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    """Export deployable static bundle or standalone Jinja2 server project."""
+    target = getattr(args, "file", "")
+    if not target:
+        target_path = find_default_target()
+        if not target_path:
+            ui.error("No markdown document specified and none found in current directory.")
+            return 1
+    else:
+        target_path = Path(target).resolve()
+
+    if not target_path.exists():
+        ui.error(f"File not found: {target_path}")
+        return 1
+
+    export_format = (getattr(args, "format", "static") or "static").lower()
+    template_name = getattr(args, "template", "") or "explainer"
+    output_dir = getattr(args, "output", "") or None
+
+    compiler = LanternCompiler()
+
+    ui.action(
+        f"Exporting {ui.bold(target_path.name)} (format: {export_format}, template: {template_name})...",
+        symbol="📦",
+    )
+    try:
+        if export_format == "jinja":
+            out_path = compiler.export_jinja(
+                input_path=target_path,
+                output_dir=output_dir,
+                template_name=template_name,
+            )
+        else:
+            out_path = compiler.export_static(
+                input_path=target_path,
+                output_dir=output_dir,
+                template_name=template_name,
+            )
+
+        files = [str(p.relative_to(out_path)) for p in out_path.rglob("*") if p.is_file()]
+        rel = (
+            out_path.relative_to(Path.cwd())
+            if out_path.is_relative_to(Path.cwd())
+            else out_path
+        )
+
+        if ui.is_json:
+            import json
+
+            print(
+                json.dumps(
+                    {
+                        "status": "ok",
+                        "format": export_format,
+                        "target": str(target_path),
+                        "output_dir": str(out_path),
+                        "file_count": len(files),
+                        "files": files,
+                    }
+                )
+            )
+            return 0
+
+        ui.success(f"Exported {export_format} bundle to {ui.bold(str(rel))} ({len(files)} files)")
+        if not ui.is_agent:
+            print(f"\n  {ui.dim('Deployment manual:')} {out_path}/README.md\n")
+        return 0
+    except Exception as exc:
+        ui.error(f"Export failed: {exc}")
         return 1
 
 
@@ -315,36 +443,46 @@ def cmd_serve(args: argparse.Namespace) -> int:
         f"Live Reload:  {ui.green('Active (SSE /_lantern/events)')}",
         f"Watching:     {target_path.parent}",
         "",
-        ui.dim("Press Ctrl+C to stop dev server"),
+        ui.yellow("⚠️  Ephemeral local dev server only. Not intended for production hosting."),
+        ui.dim("   For production hosting, compile with 'lantern export'."),
+        "",
+        f"Controls:     {ui.bold('[q]')} or {ui.bold('[Ctrl+C]')} to stop  |  {ui.bold('[r]')} reload  |  {ui.bold('[o]')} open",
     ]
     ui.panel("🏮 Lantern Live Dev Server", lines, border_color="1;36")
 
     try:
         server.start(open_browser=not no_open)
-    except KeyboardInterrupt:
-        print("\nDev server stopped.")
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    finally:
+        print(f"\n{ui.badge()} Dev server stopped.")
     return 0
 
 
 def cmd_status(args: argparse.Namespace | None = None) -> int:
     """Display system status dashboard, engine availability, and active templates."""
+    baro_mode = "none"
     barograph_status = ui.red("✘ Not installed")
     try:
         import barograph  # type: ignore
 
         baro_ver = getattr(barograph, "__version__", "available")
         barograph_status = ui.green(f"✓ In-process available (v{baro_ver})")
+        baro_mode = f"in-process (v{baro_ver})"
     except ImportError:
         import shutil
 
         if shutil.which("barograph"):
             barograph_status = ui.yellow("✓ CLI available in PATH (subprocess mode)")
+            baro_mode = "cli"
 
+    prism_active = False
     try:
         import prism  # type: ignore
 
         prism_ver = getattr(prism, "__version__", "loaded")
         prism_status = ui.green(f"✓ Native Prism active (v{prism_ver})")
+        prism_active = True
     except ImportError:
         prism_status = ui.yellow("ANSI Fallback")
 
@@ -354,6 +492,31 @@ def cmd_status(args: argparse.Namespace | None = None) -> int:
         for p in compiler.template_dir.glob("*.html.j2")
         if not p.name.startswith("base")
     ]
+    if (compiler.template_dir / "optimization").exists():
+        templates.append("optimization")
+
+    docs = discover_documents()
+
+    if ui.is_json:
+        import json
+
+        print(
+            json.dumps(
+                {
+                    "app": "lantern",
+                    "version": __version__,
+                    "python": platform.python_version(),
+                    "platform": f"{platform.system()} {platform.machine()}",
+                    "barograph": baro_mode,
+                    "prism": prism_active,
+                    "katex": True,
+                    "templates": templates,
+                    "active_document": docs[0].name if docs else None,
+                    "documents": [d.name for d in docs],
+                }
+            )
+        )
+        return 0
 
     lines = [
         f"Lantern:       {ui.bold_cyan(f'v{__version__}')} ({Path(__file__).parent})",
@@ -373,10 +536,7 @@ def cmd_status(args: argparse.Namespace | None = None) -> int:
     ]
     for tmpl in templates:
         lines.append(f"  • {ui.bold(tmpl)}")
-    if (compiler.template_dir / "optimization").exists():
-        lines.append(f"  • {ui.bold('optimization')} (domain lab starter)")
 
-    docs = discover_documents()
     if docs:
         lines.extend(["", f"{ui.bold('Active Document:')} {docs[0].name} ({docs[0].parent})"])
         if len(docs) > 1:
@@ -394,15 +554,41 @@ def cmd_list(args: argparse.Namespace | None = None) -> int:
         for p in compiler.template_dir.glob("*.html.j2")
         if not p.name.startswith("base")
     ]
+    if (compiler.template_dir / "optimization").exists():
+        templates.append("optimization")
+
+    docs = discover_documents()
+
+    if ui.is_json:
+        import json
+
+        print(
+            json.dumps(
+                {
+                    "templates": templates,
+                    "documents": [
+                        {"name": d.name, "path": str(d), "size_bytes": d.stat().st_size}
+                        for d in docs
+                    ],
+                }
+            )
+        )
+        return 0
+
+    if ui.is_agent:
+        print("Templates:")
+        for t in templates:
+            print(f"  {t}")
+        print("Documents:")
+        for d in docs:
+            print(f"  {d.name} ({d.stat().st_size} bytes)")
+        return 0
 
     print(f"\n{ui.badge()} {ui.bold('Templates & Workspaces')}")
     print(f"\n{ui.bold('Templates:')}")
     for t in templates:
         print(f"  • {t}")
-    if (compiler.template_dir / "optimization").exists():
-        print("  • optimization")
 
-    docs = discover_documents()
     print(f"\n{ui.bold(f'Documents in {Path.cwd().name}/:')}")
     if docs:
         for m in docs:
@@ -432,6 +618,13 @@ def run_interactive_hub(docs: list[Path]) -> int:
                 "build_first",
                 f"Compile '{first.name}' to standalone HTML",
                 "Inlines CSS, KaTeX math, and JavaScript into self-contained file",
+            )
+        )
+        actions.append(
+            (
+                "export_first",
+                f"Export '{first.name}' bundle",
+                "Deployable static bundle or standalone Jinja2 server project",
             )
         )
         if len(docs) > 1:
@@ -493,6 +686,19 @@ def run_interactive_hub(docs: list[Path]) -> int:
     if choice == "build_first" and docs:
         args = argparse.Namespace(file=str(docs[0]), output="", standalone=True, template="")
         return cmd_build(args)
+
+    if choice == "export_first" and docs:
+        fmt = ui.select(
+            "Select export format:",
+            [
+                ("static", "Static Web Bundle", "HTML + CSS/JS/KaTeX ready for Caddy/Nginx/Cloudflare"),
+                ("jinja", "Jinja2 Server Project", "app.py + templates + Dockerfile"),
+            ],
+        )
+        if not fmt:
+            return 0
+        args = argparse.Namespace(file=str(docs[0]), output="", format=fmt, template="")
+        return cmd_export(args)
 
     if choice == "select_serve" and docs:
         options = [
@@ -559,6 +765,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("-v", "-V", "--version", action="store_true", help="Show version")
     parser.add_argument("-h", "--help", action="store_true", help="Show help")
+    parser.add_argument("-A", "--agent", action="store_true", help="Compact agent-friendly output mode")
+    parser.add_argument("--json", action="store_true", help="Structured JSON output for MCP/agents")
     add_color_args(parser)
 
     subparsers = parser.add_subparsers(dest="command")
@@ -567,6 +775,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p_new = subparsers.add_parser("new", add_help=False)
     p_new.add_argument("name", nargs="?", default="", help="Workspace directory name")
     p_new.add_argument("--template", "-t", choices=["explainer", "dashboard", "optimization"], default="explainer")
+    p_new.add_argument("-A", "--agent", action="store_true")
+    p_new.add_argument("--json", action="store_true")
     p_new.add_argument("-h", "--help", action="store_true")
 
     # build
@@ -575,7 +785,19 @@ def _build_parser() -> argparse.ArgumentParser:
     p_build.add_argument("-o", "--output", default="", help="Output HTML destination")
     p_build.add_argument("--standalone", action="store_true", default=True, help="Inline all CSS, KaTeX, and JS")
     p_build.add_argument("--template", "-t", default="", help="Layout template override")
+    p_build.add_argument("-A", "--agent", action="store_true")
+    p_build.add_argument("--json", action="store_true")
     p_build.add_argument("-h", "--help", action="store_true")
+
+    # export
+    p_export = subparsers.add_parser("export", add_help=False)
+    p_export.add_argument("file", nargs="?", default="", help="Input markdown document to export")
+    p_export.add_argument("-o", "--output", default="", help="Output directory destination")
+    p_export.add_argument("--format", choices=["static", "jinja"], default="static", help="Export bundle format")
+    p_export.add_argument("--template", "-t", default="", help="Layout template override")
+    p_export.add_argument("-A", "--agent", action="store_true")
+    p_export.add_argument("--json", action="store_true")
+    p_export.add_argument("-h", "--help", action="store_true")
 
     # serve
     p_serve = subparsers.add_parser("serve", add_help=False)
@@ -584,14 +806,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p_serve.add_argument("--host", default="127.0.0.1", help="HTTP host")
     p_serve.add_argument("--no-open", action="store_true", help="Do not open browser")
     p_serve.add_argument("--template", "-t", default="", help="Template override")
+    p_serve.add_argument("-A", "--agent", action="store_true")
+    p_serve.add_argument("--json", action="store_true")
     p_serve.add_argument("-h", "--help", action="store_true")
 
     # status
     p_status = subparsers.add_parser("status", add_help=False)
+    p_status.add_argument("-A", "--agent", action="store_true")
+    p_status.add_argument("--json", action="store_true")
     p_status.add_argument("-h", "--help", action="store_true")
 
     # list
     p_list = subparsers.add_parser("list", add_help=False)
+    p_list.add_argument("-A", "--agent", action="store_true")
+    p_list.add_argument("--json", action="store_true")
     p_list.add_argument("-h", "--help", action="store_true")
 
     return parser
@@ -602,6 +830,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     raw_args = list(argv) if argv is not None else sys.argv[1:]
     handle_color_args(raw_args)
 
+    # Agent mode detection (CLI flags & environment variables)
+    agent_flag = any(a in ("--agent", "-A") for a in raw_args)
+    json_flag = any(a in ("--json",) for a in raw_args)
+    if agent_flag or json_flag or ui.check_agent_env():
+        ui.set_agent_mode(agent=True, json_output=json_flag)
+
     # Global help intercept
     if any(a in ("-h", "--help", "help") for a in raw_args):
         print(get_usage())
@@ -609,6 +843,14 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # Global version intercept
     if any(a in ("-V", "-v", "--version", "version") for a in raw_args) and len(raw_args) == 1:
+        if ui.is_json:
+            import json
+
+            print(json.dumps({"app": "lantern", "version": __version__}))
+            return 0
+        if ui.is_agent:
+            print(f"lantern {__version__}")
+            return 0
         print(f"{ui.badge()} {ui.bold(f'v{__version__}')}")
         return 0
 
@@ -616,7 +858,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not raw_args:
         cmd_status()
         docs = discover_documents()
-        if sys.stdin.isatty():
+        if sys.stdin.isatty() and not ui.is_agent:
             return run_interactive_hub(docs)
         return 0
 
@@ -624,7 +866,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # Handle direct document compilation without explicit 'build' keyword
     # e.g., 'lantern explainer.md' or 'lantern explainer.md --standalone'
-    known_commands = ("new", "build", "serve", "status", "list")
+    known_commands = ("new", "build", "export", "serve", "status", "list")
     if cmd not in known_commands and not cmd.startswith("-"):
         p = Path(cmd)
         if p.suffix == ".md" or p.exists():
@@ -634,17 +876,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args, _ = parser.parse_known_args(raw_args)
 
+    if getattr(args, "agent", False) or getattr(args, "json", False):
+        ui.set_agent_mode(agent=True, json_output=getattr(args, "json", False))
+
     if getattr(args, "help", False):
         print(get_usage())
         return 0
 
     if getattr(args, "version", False):
+        if ui.is_json:
+            import json
+
+            print(json.dumps({"app": "lantern", "version": __version__}))
+            return 0
+        if ui.is_agent:
+            print(f"lantern {__version__}")
+            return 0
         print(f"{ui.badge()} {ui.bold(f'v{__version__}')}")
         return 0
 
     if args.command == "new":
         if not args.name:
-            if sys.stdin.isatty():
+            if sys.stdin.isatty() and not ui.is_agent:
                 args.name = ui.prompt("Workspace directory name", default="my_explainer")
             else:
                 ui.error("Missing required argument: <name>")
@@ -653,6 +906,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     elif args.command == "build":
         return cmd_build(args)
+
+    elif args.command == "export":
+        return cmd_export(args)
 
     elif args.command == "serve":
         return cmd_serve(args)

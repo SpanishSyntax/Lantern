@@ -7,6 +7,8 @@ from typing import Any
 import xml.etree.ElementTree as etree
 from markdown.blockprocessors import BlockProcessor
 
+from lantern.directives.utils import extract_directive_blocks
+
 
 class StepperBlockProcessor(BlockProcessor):
     """Processes ::: stepper [id="..."] blocks."""
@@ -15,7 +17,6 @@ class StepperBlockProcessor(BlockProcessor):
         r"^:::\s*stepper(?:\s+(?P<args>.*))?$",
         re.IGNORECASE,
     )
-    END_RE = re.compile(r"^:::\s*$")
     STEP_SEP_RE = re.compile(r"^===\s*(?:Step\s*\d+[:.]?\s*)?(?P<title>.*?)\s*$", re.IGNORECASE)
 
     _counter = 0
@@ -43,25 +44,8 @@ class StepperBlockProcessor(BlockProcessor):
         if id_match:
             stepper_id = id_match.group(1).strip()
 
-        # Extract blocks inside the directive
-        first_block_rest = "\n".join(blocks[0].strip().splitlines()[1:])
-        blocks.pop(0)
-
-        accumulated: list[str] = []
-        if first_block_rest.strip():
-            accumulated.append(first_block_rest)
-
-        while blocks:
-            blk = blocks.pop(0)
-            lines = blk.splitlines()
-            if lines and self.END_RE.match(lines[-1].strip()):
-                if len(lines) > 1:
-                    accumulated.append("\n".join(lines[:-1]))
-                break
-            elif self.END_RE.match(blk.strip()):
-                break
-            else:
-                accumulated.append(blk)
+        # Extract blocks inside the directive with depth tracking
+        accumulated = extract_directive_blocks(blocks)
 
         # Parse steps using STEP_SEP_RE
         steps: list[tuple[str, list[str]]] = []

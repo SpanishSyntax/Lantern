@@ -279,25 +279,73 @@
   }
 
   // =========================================================================
-  // 8. KaTeX Math Auto-Render
+  // 8. KaTeX Math Auto-Render (Scoped & Chunked for Large Documents)
   // =========================================================================
   function initKaTeX() {
-    if (typeof renderMathInElement === 'function') {
+    if (typeof renderMathInElement !== 'function') return;
+
+    const katexOptions = {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '\\[', right: '\\]', display: true }
+      ],
+      throwOnError: false,
+      ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'canvas'],
+      ignoredClasses: [
+        'plotly',
+        'js-plotly-plot',
+        'lantern-plot-content',
+        'lantern-control-wrap',
+        'lantern-slider',
+        'lantern-switch',
+        'lantern-segment-btn',
+        'lantern-stepper-nav',
+        'lantern-copy-btn',
+        'no-math'
+      ]
+    };
+
+    // Find scoped content containers to prevent traversing interactive widgets
+    const containers = Array.from(document.querySelectorAll(
+      '.lantern-prose, .lantern-card-body, .lantern-callout-body, .lantern-tab-panel, .lantern-accordion-body, .lantern-curtain-reveal, .lantern-stepper-content, .lantern-comparison-panel'
+    ));
+
+    if (containers.length === 0) {
+      // Fallback to main container or body if no specific prose containers match
+      const root = document.querySelector('.lantern-container') || document.body;
       try {
-        renderMathInElement(document.body, {
-          delimiters: [
-            { left: '$$', right: '$$', display: true },
-            { left: '$', right: '$', display: false },
-            { left: '\\(', right: '\\)', display: false },
-            { left: '\\[', right: '\\]', display: true }
-          ],
-          throwOnError: false,
-          ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
-        });
+        renderMathInElement(root, katexOptions);
       } catch (err) {
         console.warn('[Lantern] KaTeX auto-render notice:', err);
       }
+      return;
     }
+
+    // Chunk rendering across idle frames to prevent UI thread lockup on huge documents
+    let idx = 0;
+    const batchSize = 12;
+
+    function renderNextBatch() {
+      const end = Math.min(idx + batchSize, containers.length);
+      for (; idx < end; idx++) {
+        try {
+          renderMathInElement(containers[idx], katexOptions);
+        } catch (err) {
+          console.warn('[Lantern] KaTeX chunk render notice:', err);
+        }
+      }
+      if (idx < containers.length) {
+        if (typeof window.requestIdleCallback === 'function') {
+          window.requestIdleCallback(renderNextBatch, { timeout: 100 });
+        } else {
+          setTimeout(renderNextBatch, 0);
+        }
+      }
+    }
+
+    renderNextBatch();
   }
 
   // =========================================================================

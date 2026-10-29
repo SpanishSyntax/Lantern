@@ -7,6 +7,8 @@ from typing import Any
 import xml.etree.ElementTree as etree
 from markdown.blockprocessors import BlockProcessor
 
+from lantern.directives.utils import extract_directive_blocks
+
 
 class CalloutBlockProcessor(BlockProcessor):
     """Processes ::: callout type=[note|tip|warning|danger] blocks."""
@@ -15,7 +17,6 @@ class CalloutBlockProcessor(BlockProcessor):
         r"^:::\s*callout(?:\s+type=(?P<type>note|tip|warning|danger|caution))?(?:\s+title=(?P<quote>[\"'])(?P<title>.*?)(?P=quote))?\s*$",
         re.IGNORECASE,
     )
-    END_RE = re.compile(r"^:::\s*$")
 
     ICONS = {
         "note": "ℹ",
@@ -55,28 +56,8 @@ class CalloutBlockProcessor(BlockProcessor):
         title_text = match.group("title") or self.TITLES.get(callout_type, "Note")
         icon = self.ICONS.get(callout_type, "ℹ")
 
-        # Extract blocks inside the directive
-        inside_blocks: list[str] = []
-        first_block_rest = "\n".join(blocks[0].strip().splitlines()[1:])
-        if first_block_rest.strip():
-            inside_blocks.append(first_block_rest)
-
-        blocks.pop(0)
-        closed = False
-
-        while blocks:
-            blk = blocks.pop(0)
-            lines = blk.splitlines()
-            if lines and self.END_RE.match(lines[-1].strip()):
-                if len(lines) > 1:
-                    inside_blocks.append("\n".join(lines[:-1]))
-                closed = True
-                break
-            elif self.END_RE.match(blk.strip()):
-                closed = True
-                break
-            else:
-                inside_blocks.append(blk)
+        # Extract blocks inside the directive with depth tracking
+        inside_blocks = extract_directive_blocks(blocks)
 
         # Build Callout HTML
         container = etree.SubElement(parent, "div")

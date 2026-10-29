@@ -1,7 +1,8 @@
-"""Terminal UI interface for Lantern, powered by Prism with robust fallback support."""
+"""Terminal UI interface for Lantern, powered by Prism with robust fallback support and Agent Mode."""
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import Any, Sequence
 
@@ -25,7 +26,7 @@ try:
         visual_len,
     )
 
-    ui = UI(app_name="lantern", icon="🏮", badge_color="1;36")
+    _raw_ui = UI(app_name="lantern", icon="🏮", badge_color="1;36")
 except ImportError:
     # Graceful fallback if prism is not yet installed in bare environments
     def detect_color_support() -> bool:
@@ -236,13 +237,190 @@ except ImportError:
         def confirm(self, message: str, default: bool = False) -> bool:
             return confirm_input(message=message, default=default)
 
-    ui = FallbackUI()
+    _raw_ui = FallbackUI()
     Spinner = Any  # type: ignore
     spinner_context = None  # type: ignore
+
+
+class LanternUIProxy:
+    """Agent-aware proxy for Prism UI / Fallback UI.
+
+    When agent mode or JSON mode is active:
+    - Suppresses ASCII box border frames and decorative banners.
+    - Suppresses interactive prompts (non-blocking fallback to defaults).
+    - Emits compact, token-efficient text or structured JSON payloads.
+    - Strips ANSI colors when communicating with LLM agents.
+    """
+
+    def __init__(self, base_ui: Any) -> None:
+        self._base = base_ui
+        self._agent_mode = self.check_agent_env()
+        self._json_mode = False
+
+    @staticmethod
+    def check_agent_env() -> bool:
+        for env_var in ("LANTERN_AGENT_MODE", "ICEBERG_AGENT_MODE", "AGENT_MODE"):
+            val = os.environ.get(env_var, "").lower()
+            if val in ("1", "true", "yes", "on"):
+                return True
+        return False
+
+    def set_agent_mode(self, agent: bool = True, json_output: bool = False) -> None:
+        self._agent_mode = agent
+        self._json_mode = json_output
+
+    @property
+    def is_agent(self) -> bool:
+        return self._agent_mode
+
+    @property
+    def is_json(self) -> bool:
+        return self._json_mode
+
+    def badge(self) -> str:
+        if self._agent_mode:
+            return "[lantern]"
+        return self._base.badge() if hasattr(self._base, "badge") else "\033[1;36m[🏮 lantern]\033[0m"
+
+    def panel(
+        self,
+        title: str,
+        lines: Sequence[str] | str,
+        border_color: str = "0;36",
+        width: int = 76,
+    ) -> None:
+        if self._json_mode:
+            return
+        if self._agent_mode:
+            clean_title = strip_ansi(title).strip()
+            print(f"=== {clean_title} ===")
+            body = lines.splitlines() if isinstance(lines, str) else list(lines)
+            for line in body:
+                print(strip_ansi(line))
+            print()
+            return
+        if hasattr(self._base, "panel"):
+            self._base.panel(title=title, lines=lines, border_color=border_color, width=width)
+        else:
+            render_panel(title=title, lines=lines, border_color=border_color, width=width)
+
+    def error_panel(self, title: str, lines: Sequence[str] | str) -> None:
+        if self._json_mode:
+            return
+        if self._agent_mode:
+            clean_title = strip_ansi(title).strip()
+            print(f"ERROR: {clean_title}", file=sys.stderr)
+            body = lines.splitlines() if isinstance(lines, str) else list(lines)
+            for line in body:
+                print(strip_ansi(line), file=sys.stderr)
+            return
+        if hasattr(self._base, "error_panel"):
+            self._base.error_panel(title=title, lines=lines)
+        else:
+            render_error_panel(title=title, lines=lines)
+
+    def action(self, msg: str, symbol: str = "⚡") -> None:
+        if self._json_mode:
+            return
+        if self._agent_mode:
+            print(f"[lantern] {strip_ansi(msg)}")
+            return
+        if hasattr(self._base, "action"):
+            self._base.action(msg, symbol=symbol)
+        else:
+            print(f"{self.badge()} \033[36m{symbol}\033[0m {msg}")
+
+    def info(self, msg: str, symbol: str = "ℹ️") -> None:
+        if self._json_mode:
+            return
+        if self._agent_mode:
+            print(f"[lantern] {strip_ansi(msg)}")
+            return
+        if hasattr(self._base, "info"):
+            self._base.info(msg, symbol=symbol)
+        else:
+            print(f"{self.badge()} \033[36m{symbol}\033[0m {msg}")
+
+    def success(self, msg: str) -> None:
+        if self._json_mode:
+            return
+        if self._agent_mode:
+            print(f"[lantern:ok] {strip_ansi(msg)}")
+            return
+        if hasattr(self._base, "success"):
+            self._base.success(msg)
+        else:
+            print(f"{self.badge()} \033[32m✔\033[0m {msg}")
+
+    def warn(self, msg: str) -> None:
+        if self._json_mode:
+            return
+        if self._agent_mode:
+            print(f"[lantern:warn] {strip_ansi(msg)}", file=sys.stderr)
+            return
+        if hasattr(self._base, "warn"):
+            self._base.warn(msg)
+        else:
+            print(f"{self.badge()} \033[33m⚠\033[0m {msg}")
+
+    def error(self, msg: str) -> None:
+        if self._json_mode:
+            import json
+
+            print(json.dumps({"status": "error", "message": strip_ansi(msg)}), file=sys.stderr)
+            return
+        if self._agent_mode:
+            print(f"[lantern:error] {strip_ansi(msg)}", file=sys.stderr)
+            return
+        if hasattr(self._base, "error"):
+            self._base.error(msg)
+        else:
+            print(f"{self.badge()} \033[31m✗\033[0m {msg}", file=sys.stderr)
+
+    def prompt(self, message: str, default: str = "") -> str:
+        if self._agent_mode:
+            return default
+        if hasattr(self._base, "prompt"):
+            return self._base.prompt(message=message, default=default)
+        return prompt_input(message=message, default=default)
+
+    def confirm(self, message: str, default: bool = False) -> bool:
+        if self._agent_mode:
+            return default
+        if hasattr(self._base, "confirm"):
+            return self._base.confirm(message=message, default=default)
+        return confirm_input(message=message, default=default)
+
+    def select(
+        self,
+        title: str,
+        options: Sequence[Any],
+        default_index: int = 0,
+    ) -> str:
+        if self._agent_mode:
+            if not options:
+                return ""
+            first = options[default_index]
+            return str(first[0] if isinstance(first, (list, tuple)) else first)
+        if hasattr(self._base, "select"):
+            return self._base.select(title=title, options=options, default_index=default_index)
+        return select_menu(title=title, options=options, default_index=default_index)
+
+    def __getattr__(self, name: str) -> Any:
+        attr = getattr(self._base, name)
+        if self._agent_mode and callable(attr) and name in (
+            "bold", "dim", "blue", "cyan", "bold_cyan", "green", "bold_green", "yellow", "red", "magenta"
+        ):
+            return lambda text: str(text)
+        return attr
+
+
+ui = LanternUIProxy(_raw_ui)
 
 __all__ = [
     "ui",
     "UI",
+    "LanternUIProxy",
     "Spinner",
     "spinner_context",
     "add_color_args",

@@ -246,6 +246,50 @@ class LanternDevServer:
         except Exception as e:
             print(f"\033[31m[Lantern] Recompile Error:\033[0m {e}", file=sys.stderr)
 
+    def _listen_keyboard(self, url: str) -> None:
+        """Non-blocking background keystroke listener for dev server controls."""
+        if not sys.stdin.isatty():
+            return
+
+        try:
+            import select
+            import termios
+            import tty
+
+            fd = sys.stdin.fileno()
+            old_settings = termios.tcgetattr(fd)
+        except Exception:
+            return
+
+        try:
+            tty.setcbreak(fd)
+            while not self.stop_event.is_set():
+                r, _, _ = select.select([sys.stdin], [], [], 0.3)
+                if r and not self.stop_event.is_set():
+                    ch = sys.stdin.read(1)
+                    if ch in ("q", "Q", "\x03"):  # 'q' or Ctrl+C
+                        self.stop_event.set()
+                        if self.httpd:
+                            threading.Thread(target=self.httpd.shutdown, daemon=True).start()
+                        break
+                    elif ch in ("r", "R"):
+                        try:
+                            self.get_latest_html()
+                            self.sse_hub.broadcast_reload()
+                            print("\r\033[K\033[36m[Lantern]\033[0m Manual refresh triggered → Reloading browser")
+                        except Exception as e:
+                            print(f"\r\033[K\033[31m[Lantern] Refresh Error:\033[0m {e}", file=sys.stderr)
+                    elif ch in ("o", "O"):
+                        webbrowser.open(url)
+                        print(f"\r\033[K\033[36m[Lantern]\033[0m Opened {url} in browser")
+        except Exception:
+            pass
+        finally:
+            try:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            except Exception:
+                pass
+
     def start(self, open_browser: bool = True) -> None:
         """Start watcher and HTTP server."""
         # Initial compile to extract referenced python scripts
@@ -277,6 +321,10 @@ class LanternDevServer:
         if open_browser:
             threading.Timer(0.3, lambda: webbrowser.open(url)).start()
 
+        # Start keyboard listener in background daemon thread
+        kb_thread = threading.Thread(target=self._listen_keyboard, args=(url,), daemon=True)
+        kb_thread.start()
+
         try:
             self.httpd.serve_forever()
         except (KeyboardInterrupt, SystemExit):
@@ -291,5 +339,9 @@ class LanternDevServer:
             self.observer.stop()
             self.observer.join()
         if self.httpd:
-            self.httpd.shutdown()
-            self.httpd.server_close()
+            try:
+                self.httpd.shutdown()
+                self.httpd.server_close()
+            except Exception:
+                pass
+            self.httpd = None

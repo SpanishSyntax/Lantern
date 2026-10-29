@@ -301,6 +301,26 @@ body {
   margin: 3rem 0;
 }
 
+/* Math, Code & Table Overflow Protection for Large Documents */
+.katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.katex {
+  max-width: 100%;
+}
+
+.lantern-prose pre,
+.lantern-prose table {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Inline Tooltips */
 .lantern-tooltip {
   position: relative;
@@ -351,6 +371,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-width: 0;
 }
 
 .lantern-grid-col-header {
@@ -378,6 +399,7 @@ body {
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease, border-color 0.2s ease;
+  min-width: 0;
 }
 
 .lantern-card:hover {
