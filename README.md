@@ -36,50 +36,37 @@ lantern build explainer.md -o dist/ --standalone
 
 ---
 
-## 🧩 Markdown Directives
+## 🧩 Markdown Directives & UI Components
 
-Lantern extends Python-Markdown with custom `:::` blocks:
+Lantern extends Python-Markdown with built-in obsidian-styled components and reactive widgets:
 
-### `::: plot <script.py> [backend=plotly|svg] [height=500px]`
-Executes the plotting script via `barograph` (in-process or subprocess fallback) and embeds the Plotly interactive div or inline vector SVG.
+### 📐 Layout Strips & Chrome
+- **`::: grid [50/50 | 60/40 | 40/60 | 3-col | 33/33/33 | 4-col]`**: Responsive equal-height grid columns delimited with `=== [Title]`.
+- **`::: card [title="..."] [badge="..."] [icon="..."]`**: Glassmorphic elevated container card.
+- **`::: stepper id="..."`**: Zero-jerk progressive phase walkthrough using CSS Grid stacking. Steps separated with `=== Step N: Title`.
+- **`::: curtain [before="Before"] [after="After"]`**: Side-by-side or split comparison card.
 
-```markdown
-::: plot plot_optimization.py backend=plotly height=520px
-:::
-```
+### 🎛️ Interactive Controls & Lab Inputs
+- **`::: slider id="..." label="..." min=.. max=.. step=.. default=.. [unit="..."]`**: Live parameter slider emitting `lantern:input` DOM events.
+- **`::: switch id="..." label="..." [default=true|false]`**: Boolean reactive toggle switch.
+- **`::: segments id="..." default="..."`**: Pill button selector with `- [key]: Label` options.
+- **`::: select id="..." label="..." [default="..."]`**: Dropdown select with `- [key]: Label` options.
+- **`::: player id="..." target="..." speeds="0.5x, 1x, 2x, 5x"`**: Media scrub bar with reset, play/pause, step controls.
 
-### `::: canvas-walker [landscape=rosenbrock|ellipse|rastrigin|saddle] [algorithms=gd,armijo,newton,bfgs,momentum]`
-Injects a high-DPI HTML5 interactive canvas with real-time gradient descent/Newton simulation, click-to-seed coordinate picker, and live readout metrics.
+### ⚡ Editorial & Visual Content
+- **`::: plot <script.py> [backend=plotly|svg] [height=500px] [title="..."]`**: In-process Barograph execution with Plotly interactive embeds or vector SVG.
+- **`::: tabs`**: Tab switcher with `=== Tab Name` panes.
+- **`::: accordion title="..." [open=true|false]`**: Collapsible technical proof or appendix card.
+- **`::: metrics [cols=2|3|4]`**: KPI status readout strip with `- Key: Value [badge=emerald|cyan|purple|amber|rose]`.
+- **`::: comparison`**: Method A vs Method B comparative trade-off container with `=== Left: ...` and `=== Right: ...`.
+- **`::: callout type=[note|tip|warning|danger] [title="..."]`**: Alert callout box.
+- **`[?term: hint]`**: Inline hover tooltip for technical nomenclature.
+- **Floating Dot Rail**: Automatic ScrollSpy navigation rail dynamically populated from `## Heading` sections.
 
-```markdown
-::: canvas-walker landscape=rosenbrock algorithms=gd,armijo,newton,bfgs,momentum
-:::
-```
-
-### `::: barrier-vs-penalty`
-Injects the interactive constraint boundary lab with a real-time penalty/barrier multiplier slider and 2D contour + 1D cross-section slice plots.
-
-```markdown
-::: barrier-vs-penalty
-:::
-```
-
-### `::: decision-ladder questions=<questions.json>`
-Injects an interactive step-by-step decision flowchart wizard for algorithmic selection.
-
-```markdown
-::: decision-ladder questions=questions.json
-:::
-```
-
-### `::: callout type=[note|tip|warning|danger]`
-GitHub/Frost style alert callouts.
-
-```markdown
-::: callout type=tip
-Second-order methods like Newton-Raphson achieve quadratic convergence near the optimum.
-:::
-```
+### 🧪 Algorithmic Lab Widgets
+- **`::: canvas-walker [landscape=rosenbrock|ellipse|rastrigin|saddle] [algorithms=gd,armijo,newton,bfgs,momentum]`**: Interactive HTML5 canvas with real-time gradient descent/Newton simulation.
+- **`::: barrier-vs-penalty`**: Interactive constraint boundary lab with penalty multiplier slider and contour slice.
+- **`::: decision-ladder questions=<questions.json>`**: Interactive step-by-step decision flowchart wizard.
 
 ---
 
