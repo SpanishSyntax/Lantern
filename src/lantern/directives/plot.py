@@ -1,4 +1,4 @@
-"""Plot directive processor for Lantern (::: plot script.py ...)."""
+"""Plot directive processor for Lantern with Barograph bridge and Lightbox toggle (::: plot script.py ...)."""
 
 from __future__ import annotations
 
@@ -17,13 +17,15 @@ from markdown.blockprocessors import BlockProcessor
 
 
 class PlotBlockProcessor(BlockProcessor):
-    """Processes ::: plot <script.py> [backend=plotly|svg] [height=500px] blocks."""
+    """Processes ::: plot <script.py> [backend=plotly|svg] [height=500px] [title="..."] blocks."""
 
     START_RE = re.compile(
         r"^:::\s*plot\s+(?P<script>[^\s]+)(?:\s+(?P<args>.*))?$",
         re.IGNORECASE,
     )
     END_RE = re.compile(r"^:::\s*$")
+
+    _counter = 0
 
     def __init__(self, parser: Any, compiler: Any = None, base_dir: Path | None = None) -> None:
         super().__init__(parser)
@@ -39,19 +41,21 @@ class PlotBlockProcessor(BlockProcessor):
     def run(self, parent: etree.Element, blocks: list[str]) -> bool:
         if not blocks:
             return False
-        lines = blocks[0].strip().splitlines()
-        if not lines:
-            return False
-        match = self.START_RE.match(lines[0])
+        first_line = blocks[0].strip().splitlines()[0]
+        match = self.START_RE.match(first_line)
         if not match:
             return False
 
         script_name = match.group("script")
         args_str = match.group("args") or ""
 
+        PlotBlockProcessor._counter += 1
+        plot_id = f"lantern-plot-{PlotBlockProcessor._counter}"
+
         # Parse options
         backend = "plotly"
         height = "520px"
+        title = ""
 
         b_match = re.search(r"backend=(plotly|svg|matplotlib|seaborn)", args_str, re.IGNORECASE)
         if b_match:
@@ -61,21 +65,22 @@ class PlotBlockProcessor(BlockProcessor):
         if h_match:
             height = h_match.group(1)
 
+        t_match = re.search(r'title=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE)
+        if t_match:
+            title = t_match.group(1).strip()
+
         # Consume blocks if multiline directive
         blocks.pop(0)
-        # Check if closed on subsequent block
         while blocks:
             blk = blocks[0].strip()
             if self.END_RE.match(blk):
                 blocks.pop(0)
                 break
-            # If not closing :::, break to let other blocks parse
             break
 
         # Resolve script path
         script_path = (self.base_dir / script_name).resolve()
         if not script_path.exists():
-            # Check relative to cwd
             cwd_path = Path(script_name).resolve()
             if cwd_path.exists():
                 script_path = cwd_path
@@ -84,18 +89,21 @@ class PlotBlockProcessor(BlockProcessor):
         if self.compiler is not None:
             self.compiler.register_watched_script(script_path)
 
+        display_title = title or script_path.name
+
         # Execute and render figure
-        plot_html, has_plotly = self._render_plot(script_path, backend, height)
+        plot_html, has_plotly = self._render_plot(script_path, backend, height, display_title, plot_id)
         if has_plotly and self.compiler is not None:
             self.compiler.has_plotly = True
 
-        # Store HTML in markdown stash to prevent mangling
         placeholder = self.parser.md.htmlStash.store(plot_html)
         p = etree.SubElement(parent, "div")
         p.text = placeholder
         return True
 
-    def _render_plot(self, script_path: Path, requested_backend: str, height: str) -> tuple[str, bool]:
+    def _render_plot(
+        self, script_path: Path, requested_backend: str, height: str, title: str, plot_id: str
+    ) -> tuple[str, bool]:
         """Execute script via Barograph (in-process or subprocess fallback) and return (html, has_plotly)."""
         if not script_path.exists():
             return (
@@ -114,7 +122,7 @@ class PlotBlockProcessor(BlockProcessor):
                 res = barograph.run_script(script_path)
                 fig = res.figure
                 detected = getattr(res, "backend", "generic")
-                return self._serialize_figure(fig, detected, requested_backend, height, script_path)
+                return self._serialize_figure(fig, detected, requested_backend, height, title, plot_id, script_path)
         except Exception:
             pass
 
@@ -129,7 +137,7 @@ class PlotBlockProcessor(BlockProcessor):
                     out_files = list(Path(tmpdir).glob(f"*.{fmt}"))
                     if out_files:
                         content = out_files[0].read_text(encoding="utf-8")
-                        return self._wrap_raw_output(content, fmt, height, script_path)
+                        return self._wrap_raw_output(content, fmt, height, title, plot_id, script_path)
         except Exception:
             pass
 
@@ -137,7 +145,6 @@ class PlotBlockProcessor(BlockProcessor):
         try:
             import runpy
 
-            # Pre-set matplotlib non-interactive backend
             try:
                 import matplotlib  # type: ignore
                 matplotlib.use("Agg")
@@ -156,7 +163,6 @@ class PlotBlockProcessor(BlockProcessor):
                 if sys.path and sys.path[0] == str(script_path.parent):
                     sys.path.pop(0)
 
-            # Search figure
             fig = None
             for attr in ("fig", "figure", "plot", "dashboard"):
                 if attr in mod_globals:
@@ -175,7 +181,7 @@ class PlotBlockProcessor(BlockProcessor):
 
             if fig is not None:
                 backend = "plotly" if hasattr(fig, "to_html") or hasattr(fig, "write_html") else "matplotlib"
-                return self._serialize_figure(fig, backend, requested_backend, height, script_path)
+                return self._serialize_figure(fig, backend, requested_backend, height, title, plot_id, script_path)
 
             return (
                 f'<div class="lantern-callout lantern-callout-warning">'
@@ -184,7 +190,7 @@ class PlotBlockProcessor(BlockProcessor):
                 f'</div>',
                 False,
             )
-        except Exception as exc:
+        except Exception:
             tb = traceback.format_exc()
             return (
                 f'<div class="lantern-callout lantern-callout-danger">'
@@ -195,7 +201,14 @@ class PlotBlockProcessor(BlockProcessor):
             )
 
     def _serialize_figure(
-        self, fig: Any, detected_backend: str, requested_backend: str, height: str, script_path: Path
+        self,
+        fig: Any,
+        detected_backend: str,
+        requested_backend: str,
+        height: str,
+        title: str,
+        plot_id: str,
+        script_path: Path,
     ) -> tuple[str, bool]:
         """Convert a live Python figure object into HTML or SVG markup."""
         # Plotly
@@ -208,11 +221,14 @@ class PlotBlockProcessor(BlockProcessor):
                 inner = buf.getvalue()
 
             wrapped = f"""
-<div class="lantern-plot-wrapper">
+<div class="lantern-plot-wrapper" id="{plot_id}">
   <div class="lantern-plot-header">
     <div class="lantern-plot-title">
       <span class="lantern-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); margin-bottom: 0;">Plotly Interactive</span>
-      <span>{html.escape(script_path.name)}</span>
+      <span>{html.escape(title)}</span>
+    </div>
+    <div class="lantern-plot-actions">
+      <button class="lantern-btn lantern-btn-sm lantern-lightbox-trigger" data-target="{plot_id}" title="Toggle Fullscreen Lightbox">⛶ Lightbox</button>
     </div>
   </div>
   <div class="lantern-plot-content" style="min-height: {height};">
@@ -227,15 +243,17 @@ class PlotBlockProcessor(BlockProcessor):
             buf = io.StringIO()
             fig.savefig(buf, format="svg", bbox_inches="tight", transparent=True)
             svg_text = buf.getvalue()
-            # Strip XML header if present
             svg_text = re.sub(r"<\?xml.*?\?>", "", svg_text)
             svg_text = re.sub(r"<!DOCTYPE.*?>", "", svg_text)
             wrapped = f"""
-<div class="lantern-plot-wrapper">
+<div class="lantern-plot-wrapper" id="{plot_id}">
   <div class="lantern-plot-header">
     <div class="lantern-plot-title">
       <span class="lantern-badge" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border-color: rgba(52, 211, 153, 0.3); margin-bottom: 0;">Vector SVG</span>
-      <span>{html.escape(script_path.name)}</span>
+      <span>{html.escape(title)}</span>
+    </div>
+    <div class="lantern-plot-actions">
+      <button class="lantern-btn lantern-btn-sm lantern-lightbox-trigger" data-target="{plot_id}" title="Toggle Fullscreen Lightbox">⛶ Lightbox</button>
     </div>
   </div>
   <div class="lantern-plot-content" style="min-height: {height}; padding: 1.5rem;">
@@ -247,20 +265,25 @@ class PlotBlockProcessor(BlockProcessor):
 
         # Raw string HTML / SVG
         if isinstance(fig, str):
-            return self._wrap_raw_output(fig, "svg" if "<svg" in fig else "html", height, script_path)
+            return self._wrap_raw_output(fig, "svg" if "<svg" in fig else "html", height, title, plot_id, script_path)
 
         return (f"<p>Unhandled figure backend: {type(fig)}</p>", False)
 
-    def _wrap_raw_output(self, content: str, fmt: str, height: str, script_path: Path) -> tuple[str, bool]:
+    def _wrap_raw_output(
+        self, content: str, fmt: str, height: str, title: str, plot_id: str, script_path: Path
+    ) -> tuple[str, bool]:
         has_plotly = "plotly" in content.lower()
         badge_text = "Vector SVG" if fmt == "svg" else "Interactive Plot"
         badge_color = "#34d399" if fmt == "svg" else "#38bdf8"
         wrapped = f"""
-<div class="lantern-plot-wrapper">
+<div class="lantern-plot-wrapper" id="{plot_id}">
   <div class="lantern-plot-header">
     <div class="lantern-plot-title">
       <span class="lantern-badge" style="background: rgba(56, 189, 248, 0.15); color: {badge_color}; border-color: rgba(56, 189, 248, 0.3); margin-bottom: 0;">{badge_text}</span>
-      <span>{html.escape(script_path.name)}</span>
+      <span>{html.escape(title)}</span>
+    </div>
+    <div class="lantern-plot-actions">
+      <button class="lantern-btn lantern-btn-sm lantern-lightbox-trigger" data-target="{plot_id}" title="Toggle Fullscreen Lightbox">⛶ Lightbox</button>
     </div>
   </div>
   <div class="lantern-plot-content" style="min-height: {height}; padding: 1rem;">

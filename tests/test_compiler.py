@@ -52,5 +52,5 @@ Helpful tip!
 """
     html_out = compiler.compile(doc, standalone=True)
     assert "<style>" in html_out
-    assert "Frost & Apple Keynote-inspired" in html_out
+    assert "Obsidian Frost" in html_out
     assert "Helpful tip!" in html_out

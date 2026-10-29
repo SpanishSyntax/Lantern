@@ -15,7 +15,7 @@ def test_cli_status(capsys):
 def test_cli_new_and_build(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
-    # Test lantern new
+    # Test lantern new explainer
     ret = main(["new", "demo_explainer", "--template", "explainer"])
     assert ret == 0
     explainer_dir = tmp_path / "demo_explainer"
@@ -32,3 +32,15 @@ def test_cli_new_and_build(tmp_path, monkeypatch):
     content = out_html.read_text(encoding="utf-8")
     assert "<style>" in content
     assert "Interactive Explainer" in content
+
+
+def test_cli_new_optimization(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    ret = main(["new", "demo_optimization", "--template", "optimization"])
+    assert ret == 0
+    opt_dir = tmp_path / "demo_optimization"
+    assert opt_dir.exists()
+    assert (opt_dir / "explainer.md").exists()
+    assert (opt_dir / "widgets" / "walker.js").exists()
+    assert (opt_dir / "plots" / "plot_rosenbrock.py").exists()

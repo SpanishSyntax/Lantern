@@ -16,14 +16,13 @@ from lantern.directives import LanternExtension
 
 
 class LanternCompiler:
-    """Compiles Markdown documents into interactive explainers and simulation dashboards."""
+    """Compiles Markdown documents into interactive scientific explainers and simulation dashboards."""
 
     def __init__(
         self,
         template_dir: Path | str | None = None,
         static_dir: Path | str | None = None,
     ) -> None:
-        # Determine package or local template/static directories
         if template_dir is not None:
             self.template_dir = Path(template_dir).resolve()
         else:
@@ -49,17 +48,11 @@ class LanternCompiler:
 
         self.watched_scripts: set[Path] = set()
         self.has_plotly = False
-        self.has_walker = False
-        self.has_barrier = False
-        self.has_decision = False
 
     def reset_state(self) -> None:
         """Reset per-compilation tracking flags."""
         self.watched_scripts.clear()
         self.has_plotly = False
-        self.has_walker = False
-        self.has_barrier = False
-        self.has_decision = False
 
     def register_watched_script(self, script_path: Path) -> None:
         """Register a Python script referenced by ::: plot directive."""
@@ -160,11 +153,12 @@ class LanternCompiler:
         subtitle = frontmatter.get("subtitle", "")
         author = frontmatter.get("author", "")
         date = frontmatter.get("date", datetime.date.today().isoformat())
+        snowpack_pdf = frontmatter.get("snowpack_pdf", "")
 
         # Protect math delimiters
         protected_content, math_placeholders = self._protect_math(content)
 
-        # Markdown Parser configuration
+        # Markdown Parser configuration with all scientific directives
         ext = LanternExtension(compiler=self, base_dir=base_dir)
         md = markdown.Markdown(
             extensions=[
@@ -186,23 +180,18 @@ class LanternCompiler:
             "subtitle": subtitle,
             "author": author,
             "date": date,
+            "snowpack_pdf": snowpack_pdf,
             "content": rendered_content,
             "standalone": standalone,
             "live_reload": live_reload,
             "static_prefix": "/static",
             "has_plotly": self.has_plotly,
-            "has_walker": self.has_walker,
-            "has_barrier": self.has_barrier,
-            "has_decision": self.has_decision,
         }
 
         # Embed static assets if standalone mode requested
         if standalone:
             context["lantern_css"] = self._read_static_asset("lantern.css")
             context["lantern_js"] = self._read_static_asset("lantern.js")
-            context["walker_js"] = self._read_static_asset("walker.js")
-            context["barrier_js"] = self._read_static_asset("barrier.js")
-            context["decision_js"] = self._read_static_asset("decision.js")
             context["katex_css"] = self._read_static_asset("katex/katex.min.css")
             context["katex_js"] = self._read_static_asset("katex/katex.min.js")
             context["katex_auto_render_js"] = self._read_static_asset("katex/contrib/auto-render.min.js")

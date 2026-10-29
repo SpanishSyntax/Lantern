@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Lantern CSS Design System
-   Frost & Apple Keynote-inspired Dark Mode Interactive Explainer Theme
+   Lantern Scientific Design System (Obsidian Frost)
+   High-End Interactive Explainer & Simulation Dashboard Theme
    ========================================================================== */
 
 :root {
@@ -8,7 +8,7 @@
   --font-mono: "Fira Code", "JetBrains Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
   --font-serif: "New York", "Charter", "Georgia", serif;
 
-  /* Color Palette - Obsidian Frost */
+  /* Obsidian Frost Palette */
   --bg-deep: #070a0f;
   --bg-canvas: #0b0f17;
   --bg-card: #131924;
@@ -25,7 +25,7 @@
   --text-muted: #64748b;
   --text-faint: #475569;
 
-  /* Accents */
+  /* Radiant Accents */
   --cyan: #38bdf8;
   --cyan-glow: rgba(56, 189, 248, 0.15);
   --emerald: #34d399;
@@ -49,7 +49,7 @@
   --radius-xl: 24px;
 }
 
-/* Light Mode Overrides (Optional / Adaptive) */
+/* Light Mode Overrides */
 @media (prefers-color-scheme: light) {
   [data-theme="light"] {
     --bg-deep: #f8fafc;
@@ -66,7 +66,7 @@
   }
 }
 
-/* Box Sizing & Reset */
+/* Reset & Box Model */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -91,6 +91,19 @@ body {
   background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.04), transparent 40%),
               radial-gradient(circle at bottom left, rgba(167, 139, 250, 0.03), transparent 40%),
               var(--bg-deep);
+}
+
+/* Reading Progress Bar */
+.lantern-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), var(--emerald));
+  z-index: 1000;
+  box-shadow: 0 0 10px var(--cyan-glow);
+  transition: width 0.1s ease-out;
 }
 
 /* Layout Containers */
@@ -151,19 +164,6 @@ body {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.lantern-hero-split {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-}
-
-@media (min-width: 840px) {
-  .lantern-hero-split {
-    grid-template-columns: 1.2fr 0.8fr;
-    align-items: center;
-  }
-}
-
 .lantern-badge {
   display: inline-flex;
   align-items: center;
@@ -179,6 +179,12 @@ body {
   border: 1px solid rgba(56, 189, 248, 0.3);
   margin-bottom: 1rem;
 }
+
+.lantern-badge-emerald { background: var(--emerald-glow); color: var(--emerald); border-color: rgba(52, 211, 153, 0.3); }
+.lantern-badge-cyan { background: var(--cyan-glow); color: var(--cyan); border-color: rgba(56, 189, 248, 0.3); }
+.lantern-badge-purple { background: var(--purple-glow); color: var(--purple); border-color: rgba(167, 139, 250, 0.3); }
+.lantern-badge-amber { background: var(--amber-glow); color: var(--amber); border-color: rgba(251, 191, 36, 0.3); }
+.lantern-badge-rose { background: var(--rose-glow); color: var(--rose); border-color: rgba(244, 63, 94, 0.3); }
 
 .lantern-title {
   font-size: clamp(2rem, 4vw, 3.2rem);
@@ -214,7 +220,7 @@ body {
   gap: 0.4rem;
 }
 
-/* Typography & Markdown Body */
+/* Typography & Headings */
 .lantern-prose {
   color: var(--text-primary);
   font-size: 1.05rem;
@@ -231,12 +237,37 @@ body {
   line-height: 1.3;
   margin-top: 2.2rem;
   margin-bottom: 0.85rem;
+  position: relative;
 }
 
 .lantern-prose h1 { font-size: 2rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.4rem; }
 .lantern-prose h2 { font-size: 1.6rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.3rem; }
 .lantern-prose h3 { font-size: 1.3rem; }
 .lantern-prose h4 { font-size: 1.1rem; }
+
+/* Heading Permalink Anchors */
+.lantern-anchor {
+  position: absolute;
+  left: -1.25rem;
+  top: 0;
+  color: var(--text-muted);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.lantern-prose h1:hover .lantern-anchor,
+.lantern-prose h2:hover .lantern-anchor,
+.lantern-prose h3:hover .lantern-anchor,
+.lantern-prose h4:hover .lantern-anchor {
+  opacity: 1;
+}
+
+.lantern-anchor:hover {
+  color: var(--cyan);
+}
 
 .lantern-prose p {
   margin-bottom: 1.25rem;
@@ -264,99 +295,82 @@ body {
   margin-bottom: 0.4rem;
 }
 
-.lantern-prose blockquote {
-  border-left: 3px solid var(--cyan);
-  background: var(--bg-card);
-  padding: 1rem 1.25rem;
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  margin: 1.5rem 0;
-  color: var(--text-secondary);
-  font-style: italic;
+.lantern-prose hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 3rem 0;
 }
 
-.lantern-prose table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1.5rem 0;
-  background: var(--bg-card);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
+/* Inline Tooltips */
+.lantern-tooltip {
+  position: relative;
+  text-decoration: underline dotted var(--cyan);
+  cursor: help;
+  color: var(--text-primary);
 }
 
-.lantern-prose th,
-.lantern-prose td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.lantern-prose th {
+.lantern-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
   background: var(--bg-surface);
   color: var(--text-primary);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.lantern-prose tr:last-child td {
-  border-bottom: none;
-}
-
-/* Code & Fenced Blocks */
-.lantern-prose code {
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-  background: var(--bg-card);
-  color: var(--cyan);
-  padding: 0.2rem 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  padding: 0.4rem 0.75rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-medium);
+  box-shadow: var(--shadow-md);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+  pointer-events: none;
+  z-index: 1000;
 }
 
-.lantern-prose pre {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 1.2rem;
-  margin: 1.5rem 0;
-  overflow-x: auto;
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  box-shadow: var(--shadow-sm);
+.lantern-tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
-.lantern-prose pre code {
-  background: transparent;
-  padding: 0;
-  border: none;
-  color: var(--text-primary);
+/* ==========================================================================
+   FAMILY 1: LAYOUT & SPATIAL CHROME
+   ========================================================================== */
+
+/* Multi-Column Grid Strip (::: grid) */
+.lantern-grid-strip {
+  margin: 2rem 0;
+  width: 100%;
 }
 
-/* KaTeX Math Tweaks */
-.katex-display {
-  margin: 1.5rem 0 !important;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 0.5rem 0;
+.lantern-grid-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-/* Grids */
-.lantern-grid-2 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-  margin: 1.5rem 0;
+.lantern-grid-col-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
-.lantern-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.5rem;
-  margin: 1.5rem 0;
+@media (max-width: 768px) {
+  .lantern-grid-strip {
+    grid-template-columns: 1fr !important;
+  }
 }
 
-/* Card Component */
+/* Card Container (::: card) */
 .lantern-card {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
@@ -368,6 +382,595 @@ body {
 
 .lantern-card:hover {
   border-color: var(--border-medium);
+}
+
+.lantern-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  gap: 0.75rem;
+}
+
+.lantern-card-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lantern-card-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.lantern-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 !important;
+}
+
+.lantern-card-body {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.lantern-card-body > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Stepper Walkthrough (::: stepper) */
+.lantern-stepper {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin: 2rem 0;
+  box-shadow: var(--shadow-md);
+}
+
+.lantern-stepper-nav {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.lantern-stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.lantern-stepper-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.lantern-stepper-btn.active {
+  background: var(--cyan-glow);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.lantern-stepper-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--border-medium);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+}
+
+.lantern-stepper-btn.active .lantern-stepper-num {
+  background: var(--cyan);
+  color: #050b14;
+}
+
+.lantern-stepper-panes {
+  min-height: 120px;
+}
+
+.lantern-stepper-pane {
+  display: none;
+}
+
+.lantern-stepper-pane.active {
+  display: block;
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+.lantern-stepper-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.lantern-stepper-readout {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Curtain Before/After Splitter (::: curtain) */
+.lantern-curtain {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 2rem 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.lantern-curtain-pane {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.lantern-curtain-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cyan);
+  margin-bottom: 0.75rem;
+}
+
+.lantern-curtain-slider {
+  display: none; /* Desktop split default */
+}
+
+/* ==========================================================================
+   FAMILY 2: INTERACTIVE CONTROLS & LAB INPUTS (THE LAB ATOMS)
+   ========================================================================== */
+
+.lantern-control-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+
+.lantern-control-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Sliders (::: slider) */
+.lantern-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lantern-slider-val {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cyan);
+}
+
+input[type="range"].lantern-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--bg-surface);
+  border-radius: 3px;
+  outline: none;
+}
+
+input[type="range"].lantern-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--cyan);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--cyan-glow);
+  transition: transform 0.1s ease;
+}
+
+input[type="range"].lantern-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* iOS-style Animated Switch (::: switch) */
+.lantern-switch-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.lantern-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.lantern-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.lantern-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  transition: .3s;
+  border-radius: 24px;
+}
+
+.lantern-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--text-primary);
+  transition: .3s;
+  border-radius: 50%;
+}
+
+.lantern-switch input:checked + .lantern-switch-slider {
+  background-color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.lantern-switch input:checked + .lantern-switch-slider:before {
+  transform: translateX(20px);
+  background-color: #050b14;
+}
+
+/* Segmented Button Strips (::: segments) */
+.lantern-segments-strip {
+  display: inline-flex;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.lantern-segment-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-family: var(--font-sans);
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lantern-segment-btn:hover {
+  color: var(--text-primary);
+}
+
+.lantern-segment-btn.active {
+  background: var(--bg-surface);
+  color: var(--cyan);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Dropdown Select (::: select) */
+.lantern-select {
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.lantern-select:focus {
+  border-color: var(--cyan);
+}
+
+.lantern-select-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* Simulation Transport Player (::: player) */
+.lantern-player {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.lantern-player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.lantern-player-btn-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.lantern-player-scrubber-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lantern-player-frame-badge {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   FAMILY 3: EDITORIAL CONTENT & FEEDBACK
+   ========================================================================== */
+
+/* Plot Directive Wrapper (::: plot) */
+.lantern-plot-wrapper {
+  margin: 2rem 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.lantern-plot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+}
+
+.lantern-plot-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lantern-plot-content {
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--bg-canvas);
+}
+
+.lantern-plot-content svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Metrics Deck (::: metrics) */
+.lantern-metrics-deck {
+  margin: 2rem 0;
+}
+
+.lantern-metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.lantern-metric-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.lantern-metric-val-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lantern-metric-value {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Tabs Directive (::: tabs) */
+.lantern-tabs {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin: 2rem 0;
+  box-shadow: var(--shadow-md);
+}
+
+.lantern-tabs-bar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem 0 0.75rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+}
+
+.lantern-tab-btn {
+  padding: 0.6rem 1.1rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.lantern-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.lantern-tab-btn.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+
+.lantern-tabs-panes {
+  padding: 1.5rem;
+}
+
+.lantern-tab-pane {
+  display: none;
+}
+
+.lantern-tab-pane.active {
+  display: block;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Accordion Directive (::: accordion) */
+details.lantern-accordion {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin: 1.5rem 0;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+details.lantern-accordion[open] {
+  border-color: var(--border-medium);
+}
+
+summary.lantern-accordion-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  list-style: none;
+}
+
+summary.lantern-accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.lantern-accordion-chevron {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+details.lantern-accordion[open] .lantern-accordion-chevron {
+  transform: rotate(180deg);
+}
+
+.lantern-accordion-body {
+  padding: 1.25rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+/* Comparison Cards (::: comparison) */
+.lantern-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.lantern-comparison-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.lantern-comparison-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.lantern-comparison-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .lantern-comparison {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Callouts (::: callout) */
@@ -401,37 +1004,14 @@ body {
   margin-bottom: 0;
 }
 
-.lantern-callout-note {
-  border-left-color: var(--cyan);
-  background: rgba(56, 189, 248, 0.05);
-}
-.lantern-callout-note .lantern-callout-header {
-  color: var(--cyan);
-}
-
-.lantern-callout-tip {
-  border-left-color: var(--emerald);
-  background: rgba(52, 211, 153, 0.05);
-}
-.lantern-callout-tip .lantern-callout-header {
-  color: var(--emerald);
-}
-
-.lantern-callout-warning {
-  border-left-color: var(--amber);
-  background: rgba(251, 191, 36, 0.05);
-}
-.lantern-callout-warning .lantern-callout-header {
-  color: var(--amber);
-}
-
-.lantern-callout-danger {
-  border-left-color: var(--rose);
-  background: rgba(244, 63, 94, 0.05);
-}
-.lantern-callout-danger .lantern-callout-header {
-  color: var(--rose);
-}
+.lantern-callout-note { border-left-color: var(--cyan); background: rgba(56, 189, 248, 0.05); }
+.lantern-callout-note .lantern-callout-header { color: var(--cyan); }
+.lantern-callout-tip { border-left-color: var(--emerald); background: rgba(52, 211, 153, 0.05); }
+.lantern-callout-tip .lantern-callout-header { color: var(--emerald); }
+.lantern-callout-warning { border-left-color: var(--amber); background: rgba(251, 191, 36, 0.05); }
+.lantern-callout-warning .lantern-callout-header { color: var(--amber); }
+.lantern-callout-danger { border-left-color: var(--rose); background: rgba(244, 63, 94, 0.05); }
+.lantern-callout-danger .lantern-callout-header { color: var(--rose); }
 
 /* Buttons */
 .lantern-btn {
@@ -450,6 +1030,7 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+  text-decoration: none !important;
 }
 
 .lantern-btn:hover {
@@ -464,7 +1045,7 @@ body {
 
 .lantern-btn-primary {
   background: var(--cyan);
-  color: #050b14;
+  color: #050b14 !important;
   border-color: var(--cyan);
 }
 .lantern-btn-primary:hover {
@@ -472,392 +1053,117 @@ body {
   box-shadow: 0 0 14px var(--cyan-glow);
 }
 
-.lantern-btn-secondary {
-  background: var(--purple);
-  color: #050b14;
-  border-color: var(--purple);
-}
-.lantern-btn-secondary:hover {
-  background: #c4b5fd;
-  box-shadow: 0 0 14px var(--purple-glow);
-}
+/* ==========================================================================
+   FEEDBACK: TOASTS & LIGHTBOX MODAL
+   ========================================================================== */
 
-/* Forms & Sliders */
-.lantern-slider-group {
+/* Toast System */
+.lantern-toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
+  z-index: 9999;
+  pointer-events: none;
 }
 
-.lantern-slider-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.lantern-slider-val {
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--cyan);
-}
-
-input[type="range"].lantern-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  background: var(--bg-surface);
-  border-radius: 3px;
-  outline: none;
-}
-
-input[type="range"].lantern-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--cyan);
-  cursor: pointer;
-  box-shadow: 0 0 8px var(--cyan-glow);
-  transition: transform 0.1s ease;
-}
-
-input[type="range"].lantern-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-/* Plot Directive Container (::: plot) */
-.lantern-plot-wrapper {
-  margin: 2rem 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-md);
-}
-
-.lantern-plot-header {
+.lantern-toast {
+  pointer-events: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.6rem;
   padding: 0.75rem 1.25rem;
   background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.lantern-plot-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
-}
-
-.lantern-plot-content {
-  width: 100%;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--bg-canvas);
-}
-
-.lantern-plot-content svg {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Canvas Walker Interactive Widget (::: canvas-walker) */
-.lantern-walker-container {
-  margin: 2.5rem 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
+  font-size: 0.875rem;
   box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(8px);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.lantern-walker-header {
+.lantern-toast-success { border-color: var(--emerald); }
+.lantern-toast-error { border-color: var(--rose); }
+
+/* Lightbox Modal */
+.lantern-lightbox-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(5, 8, 14, 0.85);
+  backdrop-filter: blur(12px);
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.lantern-lightbox-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.lantern-lightbox-dialog {
+  width: 90vw;
+  height: 85vh;
+  background: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.lantern-lightbox-header {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.2rem 1.5rem;
+  padding: 0.85rem 1.5rem;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.lantern-walker-title h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-top: 0.25rem;
-}
-
-.lantern-walker-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.lantern-walker-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 900px) {
-  .lantern-walker-layout {
-    grid-template-columns: 1.4fr 1fr;
-  }
-}
-
-.lantern-walker-canvas-pane {
-  position: relative;
-  background: var(--bg-deep);
-  border-right: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.lantern-walker-canvas {
-  width: 100%;
-  max-width: 540px;
-  aspect-ratio: 1;
-  background: #05080e;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-  cursor: crosshair;
-}
-
-.lantern-canvas-hint {
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.lantern-walker-sidebar {
+.lantern-lightbox-content {
+  flex: 1;
   padding: 1.5rem;
+  overflow: auto;
   display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  background: var(--bg-card);
-}
-
-.lantern-algo-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.lantern-algo-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  cursor: pointer;
-  user-select: none;
-}
-
-.lantern-algo-tag.active {
-  border-color: var(--cyan);
-  background: var(--cyan-glow);
-  color: var(--text-primary);
-}
-
-.lantern-algo-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.lantern-metrics-box {
-  background: var(--bg-deep);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 1rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
-.lantern-metric-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.lantern-metric-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.lantern-metric-value {
-  font-family: var(--font-mono);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-top: 0.15rem;
-}
-
-/* Barrier vs Penalty Interactive Lab (::: barrier-vs-penalty) */
-.lantern-barrier-container {
-  margin: 2.5rem 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-}
-
-.lantern-barrier-header {
-  padding: 1.2rem 1.5rem;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.lantern-barrier-controls {
-  padding: 1rem 1.5rem;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2rem;
-}
-
-.lantern-barrier-views {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 860px) {
-  .lantern-barrier-views {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.lantern-barrier-plot-pane {
-  padding: 1.25rem;
-  background: var(--bg-deep);
-  display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid var(--border-subtle);
 }
 
-.lantern-barrier-plot-pane:last-child {
-  border-right: none;
-}
-
-.lantern-barrier-canvas {
-  width: 100%;
-  max-width: 480px;
-  aspect-ratio: 1.1;
-  background: #05080e;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
-}
-
-/* Decision Ladder Wizard (::: decision-ladder) */
-.lantern-decision-container {
-  margin: 2.5rem 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  padding: 2rem;
-  box-shadow: var(--shadow-lg);
-}
-
-.lantern-decision-header {
-  margin-bottom: 1.5rem;
-}
-
-.lantern-decision-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.lantern-decision-step-counter {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--cyan);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.5rem;
-}
-
-.lantern-decision-q {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 1.25rem;
-}
-
-.lantern-decision-options {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-}
-
-@media (min-width: 600px) {
-  .lantern-decision-options {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-}
-
-.lantern-decision-opt-btn {
-  text-align: left;
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-md);
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
+.lantern-lightbox-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: var(--font-sans);
+  line-height: 1;
 }
 
-.lantern-decision-opt-btn:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--cyan);
-  transform: translateY(-2px);
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.lantern-decision-result {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(167, 139, 250, 0.08));
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Footer */
 .lantern-footer {
   margin-top: auto;
   border-top: 1px solid var(--border-subtle);
-  padding: 2rem 1.5rem;
+  padding: 2.5rem 1.5rem;
   text-align: center;
   font-size: 0.85rem;
   color: var(--text-muted);

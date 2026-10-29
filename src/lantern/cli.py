@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 import platform
+import shutil
 import sys
 from pathlib import Path
 from typing import Any, Sequence
@@ -95,7 +96,7 @@ def find_default_target() -> Path | None:
 
 
 def cmd_new(args: argparse.Namespace) -> int:
-    """Scaffold a new explainer or simulation dashboard project."""
+    """Scaffold a new explainer, simulation dashboard, or domain lab workspace."""
     name: str = args.name
     template_type: str = (args.template or "explainer").lower()
     target_dir = Path.cwd() / name
@@ -105,60 +106,35 @@ def cmd_new(args: argparse.Namespace) -> int:
         return 1
 
     target_dir.mkdir(parents=True, exist_ok=True)
+    compiler = LanternCompiler()
+
+    if template_type == "optimization":
+        opt_template_dir = compiler.template_dir / "optimization"
+        if opt_template_dir.exists():
+            shutil.copytree(opt_template_dir, target_dir, dirs_exist_ok=True)
+            (target_dir / ".gitignore").write_text("dist/\n__pycache__/\n*.html\n", encoding="utf-8")
+            ui.success(f"Scaffolded new optimization lab workspace in '{name}/'")
+            print(f"\n  \033[1;36mcd\033[0m {name}")
+            print(f"  \033[1;36mlantern serve\033[0m explainer.md\n")
+            return 0
 
     # Sample Barograph plotting script
     sample_plot_py = """import numpy as np
 import plotly.graph_objects as go
 
-# Objective Surface: Rosenbrock Banana Function
-# f(x, y) = (1 - x)^2 + 100 * (y - x^2)^2
-x = np.linspace(-2.0, 2.0, 100)
-y = np.linspace(-1.0, 3.0, 100)
+x = np.linspace(-2.0, 2.0, 80)
+y = np.linspace(-1.0, 3.0, 80)
 X, Y = np.meshgrid(x, y)
-Z = (1.0 - X) ** 2 + 100.0 * (Y - X ** 2) ** 2
+Z = np.log10((1.0 - X) ** 2 + 100.0 * (Y - X ** 2) ** 2 + 1.0)
 
-# Log surface for clean visual contours
-Z_log = np.log10(Z + 1.0)
-
-fig = go.Figure()
-
-# Add 3D surface
-fig.add_trace(
-    go.Surface(
-        x=X,
-        y=Y,
-        z=Z_log,
-        colorscale="Viridis",
-        showscale=False,
-        opacity=0.9,
-    )
+fig = go.Figure(
+    data=[go.Surface(x=X, y=Y, z=Z, colorscale="Viridis", showscale=False)]
 )
-
-# Annotate global minimum at (1, 1)
-fig.add_trace(
-    go.Scatter3d(
-        x=[1.0],
-        y=[1.0],
-        z=[0.0],
-        mode="markers+text",
-        marker=dict(size=6, color="#34d399"),
-        text=["x* (1, 1)"],
-        textposition="top center",
-        name="Global Min",
-    )
-)
-
 fig.update_layout(
-    title="Rosenbrock Valley Objective Surface (Log Scale)",
     template="plotly_dark",
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
-    scene=dict(
-        xaxis=dict(title="X", backgroundcolor="#0b0f17", gridcolor="#1e293b"),
-        yaxis=dict(title="Y", backgroundcolor="#0b0f17", gridcolor="#1e293b"),
-        zaxis=dict(title="log10(f + 1)", backgroundcolor="#0b0f17", gridcolor="#1e293b"),
-    ),
-    margin=dict(l=0, r=0, t=40, b=0),
+    margin=dict(l=0, r=0, t=30, b=0),
 )
 """
 
@@ -166,35 +142,35 @@ fig.update_layout(
         md_file = target_dir / "dashboard.md"
         content = f"""---
 title: "{name.title()} Simulation Dashboard"
-subtitle: "Interactive Multi-Method Optimization Lab"
+subtitle: "Interactive Multi-Method Exploration Deck"
 template: dashboard
 ---
 
-## Real-Time Simulation Deck
-
-Welcome to the **{name.title()}** dashboard. This workspace provides real-time parameter exploration, gradient flow simulation, and constraint relaxation studies.
-
-::: plot plot_optimization.py backend=plotly height=500px
+::: grid 60/40
+=== Live Simulation Deck
+::: plot plot_optimization.py backend=plotly height=480px title="System Phase Manifold"
 :::
 
-<div class="lantern-grid-2">
-  <div>
-    <h3>Trajectory Convergence Walker</h3>
-    <p>Simulate gradient descent, Armijo backtracking, and Newton's method simultaneously across the objective landscape.</p>
-    ::: canvas-walker landscape=rosenbrock algorithms=gd,armijo,newton,bfgs,momentum
-    :::
-  </div>
+=== Control Center
+::: card title="Lab Controls" badge="Active" icon="🎛️"
+::: slider id="step-size" label="Simulation Step Size" min="0.001" max="0.1" step="0.005" default="0.01" unit="s"
+:::
 
-  <div>
-    <h3>Constraint Boundary Lab</h3>
-    <p>Compare exterior penalty walls versus interior barrier singularities under dynamic parameter variation.</p>
-    ::: barrier-vs-penalty
-    :::
-  </div>
-</div>
+::: switch id="damping-toggle" label="Enable Damping Regularization" default=true
+:::
 
-::: callout type=tip
-Use `lantern serve dashboard.md` to start the live synchronization engine while tweaking parameters in `plot_optimization.py`.
+::: segments id="mode-selector" default="mode-a"
+- [mode-a]: Mode A (Standard)
+- [mode-b]: Mode B (High-Precision)
+:::
+:::
+:::
+
+::: metrics cols=4
+- Iterations: 120
+- State Norm: 0.0042
+- Latency: 1.2ms [badge=emerald]
+- System Health: Nominal [badge=cyan]
 :::
 """
     else:
@@ -208,52 +184,37 @@ template: explainer
 
 # Introduction
 
-In numerical optimization, solving unconstrained minimization problems:
+Welcome to **{name.title()}**. This document is an interactive scientific explainer compiled with `Lantern`.
 
-$$\\min_{{x \\in \\mathbb{{R}}^n}} f(x)$$
-
-requires navigating complex curvature, ill-conditioned valleys, and local extrema.
-
-::: callout type=note
-This document features live, client-side KaTeX rendering ($...$ and $$...$$), interactive HTML5 canvas simulation walkers, and embedded Plotly surfaces.
+::: callout type=note title="Interactive Document"
+Features multi-column spatial strips, live parameter sliders, tabs, and client-side KaTeX math ($x_{{k+1}} = x_k - \\alpha \\nabla f(x_k)$).
 :::
 
-## 1. Objective Surface & Curvature
-
-The classical test landscape for unconstrained optimization is the **Rosenbrock Valley function**:
-
-$$f(x, y) = (1 - x)^2 + 100(y - x^2)^2$$
-
-Its gradient is given by:
-
-$$\\nabla f(x, y) = \\begin{{bmatrix}} -2(1 - x) - 400x(y - x^2) \\\\ 200(y - x^2) \\end{{bmatrix}}$$
-
-Below is the live 3D surface rendered directly from `plot_optimization.py`:
-
-::: plot plot_optimization.py backend=plotly height=520px
+::: grid 60/40
+=== 3D Surface
+::: plot plot_optimization.py backend=plotly height=460px title="Objective Surface"
 :::
 
-## 2. Interactive Algorithmic Walker
+=== Parameter Lab
+::: card title="Sensitivity Parameters" badge="Interactive" icon="⚡"
+Adjust real-time parameters below:
 
-Test first-order gradient descent versus second-order Newton-Raphson and Quasi-Newton BFGS. Click anywhere on the canvas to seed initial coordinates $(x_0, y_0)$:
-
-::: canvas-walker landscape=rosenbrock algorithms=gd,armijo,newton,bfgs,momentum
+::: slider id="alpha" label="Step Size α" min="0.0001" max="0.01" step="0.0005" default="0.002" unit="s"
 :::
 
-## 3. Constraint Handling: Barrier vs. Penalty
-
-When inequality constraints $g(x) \\le 0$ are imposed, we relax the constrained objective via either Quadratic Penalties or Logarithmic Barriers:
-
-$$P(x; \\mu) = f(x) + \\frac{{\\mu}}{{2}} \\max(0, g(x))^2, \\quad \\mu \\to \\infty$$
-
-$$B(x; \\mu) = f(x) - \\mu \\ln(-g(x)), \\quad \\mu \\to 0^+$$
-
-::: barrier-vs-penalty
+::: switch id="momentum" label="Enable Polyak Momentum" default=true
+:::
+:::
 :::
 
-## 4. Algorithmic Selection Guide
+::: comparison
+=== Left: Method A (First-Order)
+- Linear convergence rate $O(1/k)$
+- Low memory overhead $O(n)$
 
-::: decision-ladder
+=== Right: Method B (Second-Order)
+- Quadratic local convergence
+- Requires curvature matrix solve
 :::
 """
 
@@ -358,7 +319,6 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     """Display system status dashboard, engine availability, and active templates."""
-    # Check Barograph availability
     barograph_status = "\033[31m✘ Not installed\033[0m"
     try:
         import barograph  # type: ignore
@@ -370,7 +330,6 @@ def cmd_status(args: argparse.Namespace) -> int:
         if shutil.which("barograph"):
             barograph_status = "\033[33m✓ CLI available in PATH (subprocess mode)\033[0m"
 
-    # Check Prism availability
     prism_status = "\033[32m✓ Loaded\033[0m" if "prism" in sys.modules else "\033[33mANSI Fallback\033[0m"
 
     compiler = LanternCompiler()
@@ -385,12 +344,17 @@ def cmd_status(args: argparse.Namespace) -> int:
         f"  • Barograph:   {barograph_status}",
         f"  • Prism UI:    {prism_status}",
         f"  • KaTeX Math:  \033[32m✓ Bundled local\033[0m",
-        f"  • Markdown:    \033[32m✓ Directives enabled\033[0m [plot, walker, barrier, decision, callout]",
+        f"  • Directives:  \033[32m✓ Enabled (3 Families)\033[0m",
+        "    - Layout:    grid, card, stepper, curtain",
+        "    - Controls:  slider, switch, segments, select, player",
+        "    - Content:   plot, metrics, tabs, accordion, comparison, callout",
         "",
         "\033[1mAvailable Templates:\033[0m",
     ]
     for tmpl in templates:
         lines.append(f"  • \033[1m{tmpl}\033[0m")
+    if (compiler.template_dir / "optimization").exists():
+        lines.append("  • \033[1moptimization\033[0m (domain lab starter)")
 
     target = find_default_target()
     if target:
@@ -409,6 +373,8 @@ def cmd_list(args: argparse.Namespace) -> int:
     print(f"\n\033[1mTemplates:\033[0m")
     for t in templates:
         print(f"  • {t}")
+    if (compiler.template_dir / "optimization").exists():
+        print("  • optimization")
 
     mds = list(Path.cwd().glob("*.md"))
     print(f"\n\033[1mDocuments in {Path.cwd().name}/:\033[0m")
@@ -434,7 +400,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # new
     p_new = subparsers.add_parser("new", help="Scaffold a new explainer or simulation workspace")
     p_new.add_argument("name", help="Workspace / project directory name")
-    p_new.add_argument("--template", choices=["explainer", "dashboard"], default="explainer", help="Starter template type")
+    p_new.add_argument("--template", choices=["explainer", "dashboard", "optimization"], default="explainer", help="Starter template type")
 
     # build
     p_build = subparsers.add_parser("build", help="Compile Markdown into an optimized HTML document")
@@ -460,7 +426,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if not args.command:
-        # Default to status if no arguments provided
         return cmd_status(args)
 
     if args.command == "new":
