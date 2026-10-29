@@ -211,7 +211,7 @@ class PlotBlockProcessor(BlockProcessor):
         script_path: Path,
     ) -> tuple[str, bool]:
         """Convert a live Python figure object into HTML or SVG markup."""
-        title_html = f"<span>{html.escape(title)}</span>" if title else ""
+        title_html = f'<span title="{html.escape(title)}">{html.escape(title)}</span>' if title else ""
 
         # Plotly
         if (requested_backend == "plotly" or detected_backend == "plotly") and (hasattr(fig, "to_html") or hasattr(fig, "write_html")):
@@ -273,7 +273,7 @@ class PlotBlockProcessor(BlockProcessor):
         self, content: str, fmt: str, height: str, title: str, plot_id: str, script_path: Path
     ) -> tuple[str, bool]:
         has_plotly = "plotly" in content.lower()
-        title_html = f"<span>{html.escape(title)}</span>" if title else ""
+        title_html = f'<span title="{html.escape(title)}">{html.escape(title)}</span>' if title else ""
         wrapped = f"""
 <div class="lantern-plot-wrapper" id="{plot_id}">
   <div class="lantern-plot-header">

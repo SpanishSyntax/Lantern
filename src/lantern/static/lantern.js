@@ -467,6 +467,25 @@
     });
   }
 
+  // =========================================================================
+  // 10. Responsive Plotly & Canvas Resize Coordinator
+  // =========================================================================
+  function initPlotlyResize() {
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (window.Plotly) {
+          document.querySelectorAll('.plotly-graph-div').forEach(el => {
+            try {
+              window.Plotly.Plots.resize(el);
+            } catch (err) {}
+          });
+        }
+      }, 100);
+    }, { passive: true });
+  }
+
   // DOMContentLoaded Initializer
   document.addEventListener('DOMContentLoaded', () => {
     initProgressBar();
@@ -480,6 +499,7 @@
     initTabs();
     initLightboxes();
     initCodeCopy();
+    initPlotlyResize();
     initKaTeX();
   });
 })();
