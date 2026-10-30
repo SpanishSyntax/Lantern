@@ -12,7 +12,9 @@ from typing import Any, Sequence
 
 from lantern import __version__
 from lantern.compiler import LanternCompiler
+from lantern.config import SiteConfig
 from lantern.server import LanternDevServer
+from lantern.site import LanternSiteBuilder
 from lantern.ui import (
     add_color_args,
     handle_color_args,
@@ -261,21 +263,78 @@ Adjust real-time parameters below:
 
 
 def cmd_build(args: argparse.Namespace) -> int:
-    """Compile Markdown into a self-contained HTML document."""
+    """Compile Markdown or multi-page site into an optimized HTML document."""
     target = getattr(args, "file", "")
+    target_path: Path | None = None
+
     if not target:
-        target_path = find_default_target()
-        if not target_path:
-            ui.error("No markdown document specified and none found in current directory.")
-            return 1
+        if (Path.cwd() / "site.yaml").exists():
+            target_path = Path.cwd() / "site.yaml"
+        elif (Path.cwd() / "site.yml").exists():
+            target_path = Path.cwd() / "site.yml"
+        elif (Path.cwd() / "content").is_dir():
+            target_path = Path.cwd() / "content"
+        else:
+            target_path = find_default_target()
+            if not target_path:
+                ui.error("No markdown document or site.yaml specified and none found in current directory.")
+                return 1
     else:
         target_path = Path(target).resolve()
 
     if not target_path.exists():
-        ui.error(f"File not found: {target_path}")
+        ui.error(f"File or directory not found: {target_path}")
         return 1
 
-    # Large Markdown safeguard & telemetry
+    is_site = target_path.is_dir() or target_path.name in ("site.yaml", "site.yml")
+    raw_standalone = getattr(args, "standalone", None)
+    standalone = (not is_site) if raw_standalone is None else bool(raw_standalone)
+
+    if is_site:
+        out_dest = getattr(args, "output", "") or None
+        site_config = SiteConfig.load(target=target_path, output_dir=out_dest)
+        template_name = getattr(args, "template", None) or site_config.template or "explainer"
+        site_config.template = template_name
+
+        ui.action(
+            f"Compiling Multi-Page Site {ui.bold(site_config.site_name)} ({len(site_config.pages)} pages, standalone: {standalone})...",
+            symbol="🏮",
+        )
+        try:
+            builder = LanternSiteBuilder()
+            out_dir = builder.build(site_config=site_config, standalone=standalone)
+            html_files = list(out_dir.rglob("*.html"))
+            rel = (
+                out_dir.relative_to(Path.cwd())
+                if out_dir.is_relative_to(Path.cwd())
+                else out_dir
+            )
+
+            if ui.is_json:
+                import json
+
+                print(
+                    json.dumps(
+                        {
+                            "status": "ok",
+                            "site_name": site_config.site_name,
+                            "target": str(target_path),
+                            "output_dir": str(out_dir),
+                            "page_count": len(site_config.pages),
+                            "pages": [p.rel_html_path for p in site_config.pages],
+                            "standalone": standalone,
+                        }
+                    )
+                )
+                return 0
+
+            ui.success(f"Built Multi-Page Site to {ui.bold(str(rel))} ({len(html_files)} HTML pages)")
+            return 0
+        except Exception as exc:
+            ui.error(f"Site compilation failed: {exc}")
+            return 1
+
+    # Single markdown file compilation
     size_bytes = target_path.stat().st_size
     if size_bytes > 2 * 1024 * 1024:
         ui.info(
@@ -411,16 +470,25 @@ def cmd_export(args: argparse.Namespace) -> int:
 def cmd_serve(args: argparse.Namespace) -> int:
     """Spins up dev server with SSE live browser synchronization."""
     target = getattr(args, "file", "")
+    target_path: Path | None = None
+
     if not target:
-        target_path = find_default_target()
-        if not target_path:
-            ui.error("No markdown document specified and none found in current directory.")
-            return 1
+        if (Path.cwd() / "site.yaml").exists():
+            target_path = Path.cwd() / "site.yaml"
+        elif (Path.cwd() / "site.yml").exists():
+            target_path = Path.cwd() / "site.yml"
+        elif (Path.cwd() / "content").is_dir():
+            target_path = Path.cwd() / "content"
+        else:
+            target_path = find_default_target()
+            if not target_path:
+                ui.error("No markdown document or site.yaml specified and none found in current directory.")
+                return 1
     else:
         target_path = Path(target).resolve()
 
     if not target_path.exists():
-        ui.error(f"File not found: {target_path}")
+        ui.error(f"File or directory not found: {target_path}")
         return 1
 
     port = int(getattr(args, "port", None) or 8080)
@@ -436,15 +504,20 @@ def cmd_serve(args: argparse.Namespace) -> int:
     )
 
     url = f"http://{server.host}:{server.port}"
+    if server.is_site and server.site_config:
+        target_desc = f"{server.site_config.site_name} ({len(server.site_config.pages)} pages)"
+    else:
+        target_desc = target_path.name
+
     lines = [
         f"URL:          {ui.bold_cyan(url)}",
-        f"Target:       {ui.bold(target_path.name)}",
+        f"Target:       {ui.bold(target_desc)}",
         f"Template:     {template_name}",
         f"Live Reload:  {ui.green('Active (SSE /_lantern/events)')}",
-        f"Watching:     {target_path.parent}",
+        f"Watching:     {server.workspace_dir}",
         "",
         ui.yellow("⚠️  Ephemeral local dev server only. Not intended for production hosting."),
-        ui.dim("   For production hosting, compile with 'lantern export'."),
+        ui.dim("   For production hosting, compile with 'lantern build' or 'lantern export'."),
         "",
         f"Controls:     {ui.bold('[q]')} or {ui.bold('[Ctrl+C]')} to stop  |  {ui.bold('[r]')} reload  |  {ui.bold('[o]')} open",
     ]
@@ -781,9 +854,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # build
     p_build = subparsers.add_parser("build", add_help=False)
-    p_build.add_argument("file", nargs="?", default="", help="Input markdown document")
-    p_build.add_argument("-o", "--output", default="", help="Output HTML destination")
-    p_build.add_argument("--standalone", action="store_true", default=True, help="Inline all CSS, KaTeX, and JS")
+    p_build.add_argument("file", nargs="?", default="", help="Input markdown document, directory, or site.yaml")
+    p_build.add_argument("-o", "--output", default="", help="Output HTML destination or directory")
+    p_build.add_argument("--standalone", dest="standalone", action="store_true", default=None, help="Inline all CSS, KaTeX, and JS")
     p_build.add_argument("--template", "-t", default="", help="Layout template override")
     p_build.add_argument("-A", "--agent", action="store_true")
     p_build.add_argument("--json", action="store_true")
@@ -801,7 +874,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # serve
     p_serve = subparsers.add_parser("serve", add_help=False)
-    p_serve.add_argument("file", nargs="?", default="", help="Markdown document to watch and serve")
+    p_serve.add_argument("file", nargs="?", default="", help="Markdown document, directory, or site.yaml to watch and serve")
     p_serve.add_argument("-p", "--port", type=int, default=8080, help="HTTP port")
     p_serve.add_argument("--host", default="127.0.0.1", help="HTTP host")
     p_serve.add_argument("--no-open", action="store_true", help="Do not open browser")

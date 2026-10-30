@@ -13,6 +13,7 @@ from typing import Any
 import jinja2
 import markdown
 
+from lantern.config import parse_yaml_safely
 from lantern.directives import LanternExtension
 
 
@@ -69,20 +70,9 @@ class LanternCompiler:
             if len(parts) >= 3:
                 raw_fm = parts[1]
                 content = parts[2]
-                for line in raw_fm.splitlines():
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    if ":" in line:
-                        k, v = line.split(":", 1)
-                        k = k.strip()
-                        v = v.strip().strip("\"'")
-                        if v.lower() == "true":
-                            fm[k] = True
-                        elif v.lower() == "false":
-                            fm[k] = False
-                        else:
-                            fm[k] = v
+                parsed = parse_yaml_safely(raw_fm)
+                if isinstance(parsed, dict):
+                    fm = parsed
 
         return fm, content
 
@@ -145,6 +135,9 @@ class LanternCompiler:
         base_dir: Path | None = None,
         live_reload: bool = False,
         extra_context: dict[str, Any] | None = None,
+        input_path: Path | str | None = None,
+        sibling_css: str | None = None,
+        rewrite_md_links: bool = False,
     ) -> str:
         """Compile Markdown string to full HTML document."""
         self.reset_state()
@@ -163,6 +156,28 @@ class LanternCompiler:
         author = frontmatter.get("author", "")
         date = frontmatter.get("date", datetime.date.today().isoformat())
         snowpack_pdf = frontmatter.get("snowpack_pdf", "")
+
+        # Sibling CSS auto-discovery
+        if sibling_css is None and input_path is not None:
+            cand = Path(input_path).resolve().with_suffix(".css")
+            if cand.exists() and cand.is_file():
+                sibling_css = cand.read_text(encoding="utf-8")
+                self.register_watched_script(cand)
+
+        # Scoped frontmatter CSS overrides
+        fm_css = frontmatter.get("css")
+        if fm_css:
+            if isinstance(fm_css, str):
+                fm_css = [fm_css]
+            fm_css_parts: list[str] = []
+            for item in fm_css:
+                css_file = (base_dir / str(item)).resolve()
+                if css_file.exists() and css_file.is_file():
+                    fm_css_parts.append(css_file.read_text(encoding="utf-8"))
+                    self.register_watched_script(css_file)
+            if fm_css_parts:
+                joined = "\n".join(fm_css_parts)
+                sibling_css = f"{sibling_css}\n{joined}" if sibling_css else joined
 
         # Protect math delimiters
         protected_content, math_placeholders = self._protect_math(content)
@@ -183,6 +198,14 @@ class LanternCompiler:
         raw_html = md.convert(protected_content)
         rendered_content = self._restore_math(raw_html, math_placeholders)
 
+        # Rewrite internal relative .md links to .html if requested
+        if rewrite_md_links:
+            rendered_content = re.sub(
+                r'href="((?!https?://|#)[^"]+?)\.md(#[^"]*)?"',
+                r'href="\1.html\2"',
+                rendered_content,
+            )
+
         # Prepare Template Context
         context: dict[str, Any] = {
             "title": title,
@@ -198,6 +221,15 @@ class LanternCompiler:
             "live_reload": live_reload,
             "static_prefix": "/static",
             "has_plotly": self.has_plotly,
+            "sibling_css": sibling_css,
+            "extra_css_content": "",
+            "breadcrumbs": [],
+            "prev_page": None,
+            "next_page": None,
+            "root_path": "",
+            "brand": "",
+            "brand_icon": "🏮",
+            "site_name": "",
         }
 
         # Embed static assets if standalone mode requested
@@ -209,6 +241,10 @@ class LanternCompiler:
             context["katex_auto_render_js"] = self._read_static_asset("katex/contrib/auto-render.min.js")
 
         if extra_context:
+            if "sibling_css" in extra_context and sibling_css:
+                merged_css = extra_context["sibling_css"]
+                if sibling_css not in merged_css:
+                    extra_context["sibling_css"] = f"{merged_css}\n{sibling_css}"
             context.update(extra_context)
 
         # Choose template
@@ -226,6 +262,8 @@ class LanternCompiler:
         template_name: str = "explainer",
         standalone: bool = False,
         live_reload: bool = False,
+        extra_context: dict[str, Any] | None = None,
+        rewrite_md_links: bool = False,
     ) -> Path:
         """Compile a markdown file and write the resulting HTML to disk."""
         in_file = Path(input_path).resolve()
@@ -239,6 +277,9 @@ class LanternCompiler:
             standalone=standalone,
             base_dir=in_file.parent,
             live_reload=live_reload,
+            extra_context=extra_context,
+            input_path=in_file,
+            rewrite_md_links=rewrite_md_links,
         )
 
         if output_path is None:

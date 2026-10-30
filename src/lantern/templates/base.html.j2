@@ -34,6 +34,14 @@
     <link rel="stylesheet" href="{{ static_prefix }}/lantern.css" />
   {% endif %}
 
+  {# Global Site CSS & Sibling Scoped CSS #}
+  {% if extra_css_content %}
+    <style id="lantern-extra-css">{{ extra_css_content | safe }}</style>
+  {% endif %}
+  {% if sibling_css %}
+    <style id="lantern-sibling-css">{{ sibling_css | safe }}</style>
+  {% endif %}
+
   {% block head_extra %}{% endblock %}
 
   {# Live Reload Script #}
@@ -57,14 +65,31 @@
 <body>
   <!-- Header / Navigation -->
   <header class="lantern-nav">
-    <a href="#" class="lantern-brand">
-      <span class="lantern-brand-icon">🏮</span>
-      <span>{{ brand | default(title | default("Lantern")) }}</span>
-    </a>
+    <div class="lantern-nav-left">
+      <a href="{{ root_path | default('') }}index.html" class="lantern-brand">
+        <span class="lantern-brand-icon">{{ brand_icon | default("🏮") }}</span>
+        {% if not breadcrumbs %}
+          <span>{{ brand | default(title | default("Lantern")) }}</span>
+        {% endif %}
+      </a>
+      {% if breadcrumbs %}
+        <nav class="lantern-breadcrumbs" aria-label="Breadcrumb">
+          {% for crumb in breadcrumbs %}
+            {% if not loop.first %}<span class="lantern-breadcrumb-sep">/</span>{% endif %}
+            {% if crumb.url and not loop.last %}
+              <a href="{{ crumb.url }}" class="lantern-breadcrumb-item">{{ crumb.title }}</a>
+            {% else %}
+              <span class="lantern-breadcrumb-item {% if loop.last %}active{% endif %}">{{ crumb.title }}</span>
+            {% endif %}
+          {% endfor %}
+        </nav>
+      {% endif %}
+    </div>
     
     <div class="lantern-nav-meta">
       {% if snowpack_pdf %}
-        <a class="lantern-btn lantern-btn-primary lantern-btn-sm" href="{{ snowpack_pdf }}" target="_blank">
+        {% set pdf_url = snowpack_pdf if snowpack_pdf.startswith(('http://', 'https://', '/')) else (root_path | default('')) ~ snowpack_pdf %}
+        <a class="lantern-btn lantern-btn-primary lantern-btn-sm" href="{{ pdf_url }}" target="_blank">
           📄 Open Companion PDF Reader (Snowpack)
         </a>
       {% endif %}
@@ -79,6 +104,30 @@
   <!-- Main Content Layout -->
   <main class="lantern-main">
     {% block content %}{% endblock %}
+
+    {% if prev_page or next_page %}
+      <div class="lantern-container">
+        <nav class="lantern-pagination" aria-label="Page Navigation">
+          {% if prev_page %}
+            <a href="{{ prev_page.url }}" class="lantern-page-nav-link lantern-page-nav-prev">
+              <span class="lantern-page-nav-direction">← Previous</span>
+              <span class="lantern-page-nav-title">{{ prev_page.title }}</span>
+            </a>
+          {% else %}
+            <div class="lantern-page-nav-placeholder"></div>
+          {% endif %}
+
+          {% if next_page %}
+            <a href="{{ next_page.url }}" class="lantern-page-nav-link lantern-page-nav-next">
+              <span class="lantern-page-nav-direction">Next →</span>
+              <span class="lantern-page-nav-title">{{ next_page.title }}</span>
+            </a>
+          {% else %}
+            <div class="lantern-page-nav-placeholder"></div>
+          {% endif %}
+        </nav>
+      </div>
+    {% endif %}
   </main>
 
   <!-- Toast Notification Container -->

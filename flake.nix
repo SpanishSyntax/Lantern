@@ -49,6 +49,7 @@
           pkgs.python3Packages.watchdog
           pkgs.python3Packages.rich
           pkgs.python3Packages.prism
+          pkgs.python3Packages.pyyaml
           barographPkg
         ];
 
@@ -86,18 +87,19 @@
 
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
-          lanternPackage
-          python3
-          python3Packages.setuptools
-          python3Packages.pytest
-          python3Packages.jinja2
-          python3Packages.markdown
-          python3Packages.watchdog
-          python3Packages.rich
-          python3Packages.prism
-          python3Packages.numpy
-          python3Packages.matplotlib
-          python3Packages.plotly
+          (python3.withPackages (ps: with ps; [
+            setuptools
+            pytest
+            jinja2
+            markdown
+            watchdog
+            rich
+            prism
+            pyyaml
+            numpy
+            matplotlib
+            plotly
+          ]))
           barographPkg
           direnv
         ];
