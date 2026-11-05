@@ -19,6 +19,7 @@ from watchdog.observers import Observer
 
 from lantern.compiler import LanternCompiler
 from lantern.config import PageMeta, SiteConfig
+from lantern.ui import ui
 
 
 def find_available_port(start_port: int = 8080, max_attempts: int = 50) -> int:
@@ -468,17 +469,13 @@ class LanternDevServer:
                 if changed_path.name in ("site.yaml", "site.yml"):
                     self.site_config = SiteConfig.load(self.target_orig)
                 self.sse_hub.broadcast_reload()
-                print(
-                    f"\033[36m[Lantern]\033[0m Modified: {changed_path.name} → Reloading browser"
-                )
+                ui.action(f"Modified: {changed_path.name} → Reloading browser")
             else:
                 self.get_latest_html()
                 self.sse_hub.broadcast_reload()
-                print(
-                    f"\033[36m[Lantern]\033[0m Modified: {changed_path.name} → Reloading browser"
-                )
+                ui.action(f"Modified: {changed_path.name} → Reloading browser")
         except Exception as e:
-            print(f"\033[31m[Lantern] Recompile Error:\033[0m {e}", file=sys.stderr)
+            ui.error(f"Recompile Error: {e}")
 
     def _listen_keyboard(self, url: str) -> None:
         """Non-blocking background keystroke listener for dev server controls."""
@@ -515,19 +512,12 @@ class LanternDevServer:
                             else:
                                 self.get_latest_html()
                                 self.sse_hub.broadcast_reload()
-                            print(
-                                "\r\033[K\033[36m[Lantern]\033[0m Manual refresh triggered → Reloading browser"
-                            )
+                            ui.action("Manual refresh triggered → Reloading browser")
                         except Exception as e:
-                            print(
-                                f"\r\033[K\033[31m[Lantern] Refresh Error:\033[0m {e}",
-                                file=sys.stderr,
-                            )
+                            ui.error(f"Refresh Error: {e}")
                     elif ch in ("o", "O"):
                         webbrowser.open(url)
-                        print(
-                            f"\r\033[K\033[36m[Lantern]\033[0m Opened {url} in browser"
-                        )
+                        ui.action(f"Opened {url} in browser")
         except Exception:
             pass
         finally:
