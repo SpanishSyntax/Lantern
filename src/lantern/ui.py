@@ -504,11 +504,11 @@ class LanternUIProxy:
 
             return "\n".join(lines) + "\n"
 
-    def serve_banner(
+    def status_card(
         self,
         title: str,
-        url: str,
         target: str | None = None,
+        url: str | None = None,
         details: Sequence[tuple[str, str]] | dict[str, str] | None = None,
         controls: Sequence[tuple[str, str]] | None = None,
         warning: str | None = None,
@@ -516,11 +516,11 @@ class LanternUIProxy:
         border_color: str = "1;36",
         width: int = 76,
     ) -> None:
-        if hasattr(self._base, "serve_banner"):
-            self._base.serve_banner(
+        if hasattr(self._base, "status_card"):
+            self._base.status_card(
                 title=title,
-                url=url,
                 target=target,
+                url=url,
                 details=details,
                 controls=controls,
                 warning=warning,
@@ -530,12 +530,12 @@ class LanternUIProxy:
             )
         else:
             try:
-                from prism.banner import render_serve_banner
+                from prism.cards import render_status_card
 
-                render_serve_banner(
+                render_status_card(
                     title=title,
-                    url=url,
                     target=target,
+                    url=url,
                     details=details,
                     controls=controls,
                     warning=warning,
@@ -545,9 +545,6 @@ class LanternUIProxy:
                 )
             except Exception:
                 self.panel(title, [f"URL: {url}", f"Target: {target}"])
-
-    status_card = serve_banner
-    card = serve_banner
 
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._base, name)
