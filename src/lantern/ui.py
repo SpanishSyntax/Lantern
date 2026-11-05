@@ -1,591 +1,190 @@
-"""Terminal UI interface for Lantern, powered by Prism with robust fallback support and Agent Mode."""
+"""Terminal UI interface for Lantern, powered directly by Prism."""
 
 from __future__ import annotations
 
-import os
-import sys
-from typing import Any, Sequence
+from prism import (
+    UI,
+    Spinner,
+    add_agent_args,
+    add_color_args,
+    apply_agent_args,
+    apply_color_args,
+    confirm_input,
+    detect_color_support,
+    get_terminal_columns,
+    handle_agent_args,
+    handle_color_args,
+    multiselect_menu,
+    prompt_input,
+    render_error_panel,
+    render_panel,
+    select_menu,
+    spinner_context,
+    strip_ansi,
+    visual_len,
+)
 
 try:
-    from prism import (
-        UI,
-        Spinner,
-        add_color_args,
-        apply_color_args,
-        confirm_input,
-        detect_color_support,
-        get_terminal_columns,
-        handle_color_args,
-        multiselect_menu,
-        prompt_input,
-        render_error_panel,
-        render_panel,
-        select_menu,
-        spinner_context,
-        strip_ansi,
-        visual_len,
-    )
-
-    _raw_ui = UI(app_name="lantern", icon="🏮", badge_color="1;36")
+    from prism import render_help
 except ImportError:
-    # Graceful fallback if prism is not yet installed in bare environments
-    def detect_color_support() -> bool:
-        return sys.stdout.isatty()
+    try:
+        from prism.help import render_help
+    except ImportError:
+        render_help = None  # type: ignore
 
-    def strip_ansi(text: str) -> str:
-        import re
+try:
+    from prism import handle_version_arg
+except ImportError:
+    try:
+        from prism.color import handle_version_arg
+    except ImportError:
+        handle_version_arg = None  # type: ignore
 
-        return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
+try:
+    from prism import get_agent_env, get_json_env, get_toon_env
+except ImportError:
+    get_agent_env = None  # type: ignore
+    get_json_env = None  # type: ignore
+    get_toon_env = None  # type: ignore
 
-    def visual_len(text: str) -> int:
-        return len(strip_ansi(text))
+try:
+    from prism.cards import render_status_card
+except ImportError:
+    render_status_card = None  # type: ignore
 
-    def get_terminal_columns(fallback: int = 80) -> int:
-        import shutil
+try:
+    from prism import check_agent_env
+except ImportError:
+    from prism.styling import check_agent_env
 
-        return shutil.get_terminal_size((fallback, 24)).columns
+ui = UI(app_name="lantern", icon="🏮", badge_color="1;36")
+ui.check_agent_env = check_agent_env  # type: ignore
 
-    def add_color_args(parser: Any) -> None:
-        parser.add_argument(
-            "--color",
-            choices=["auto", "always", "never"],
-            default="auto",
-            help="Color output mode (default: auto)",
+
+def _render_help(
+    tagline: str,
+    usage: Sequence[str] | str,
+    commands: Sequence[tuple[str, str]] | dict[str, str] | None = None,
+    options: Sequence[tuple[str, str]] | dict[str, str] | None = None,
+    sections: Sequence[tuple[str, Sequence[tuple[str, str]] | str]] | None = None,
+    examples: Sequence[tuple[str, str]] | Sequence[str] | None = None,
+    version: str | None = None,
+    app_name: str | None = None,
+    is_agent: bool | None = None,
+) -> str:
+    name = app_name or "Lantern"
+    agent = is_agent if is_agent is not None else ui.is_agent
+    try:
+        from prism.help import render_help as _rh
+
+        return _rh(
+            app_name=name,
+            tagline=tagline,
+            usage=usage,
+            commands=commands,
+            options=options,
+            sections=sections,
+            examples=examples,
+            version=version,
+            is_agent=agent,
         )
-        parser.add_argument(
-            "--no-color",
-            action="store_true",
-            help="Disable color output",
-        )
-
-    def handle_color_args(args: Any) -> None:
-        pass
-
-    def apply_color_args(args: Any) -> None:
-        pass
-
-    def render_panel(
-        title: str,
-        lines: Sequence[str] | str,
-        border_color: str = "0;36",
-        width: int = 76,
-        styler: Any = None,
-        stream: Any = None,
-    ) -> None:
-        out = stream or sys.stdout
-        body_lines = lines.splitlines() if isinstance(lines, str) else list(lines)
-        box_w = min(width, max(36, get_terminal_columns() - 2))
-        inner_w = box_w - 4
-        title_clean = strip_ansi(title)
-        title_seg = f" {title} " if title else ""
-        top_fill = max(1, box_w - 3 - len(title_clean) - (2 if title else 0))
-        title_hdr = f"\033[1m{title_seg}\033[0m" if title else ""
-        top = f"\033[{border_color}m╭─\033[0m{title_hdr}\033[{border_color}m{'─' * top_fill}╮\033[0m"
-        bottom = f"\033[{border_color}m╰{'─' * (box_w - 2)}╯\033[0m"
-        side = f"\033[{border_color}m│\033[0m"
-        print(top, file=out)
-        for raw_line in body_lines:
-            vis = visual_len(raw_line)
-            if vis <= inner_w:
-                pad = " " * (inner_w - vis)
-                print(f"{side} {raw_line}{pad} {side}", file=out)
-            else:
-                plain = strip_ansi(raw_line)
-                clipped = plain[: max(0, inner_w - 3)] + "..."
-                pad = " " * max(0, inner_w - len(clipped))
-                print(f"{side} {clipped}{pad} {side}", file=out)
-        print(bottom, file=out)
-
-    def render_error_panel(
-        title: str,
-        lines: Sequence[str] | str,
-        styler: Any = None,
-        stream: Any = None,
-    ) -> None:
-        out = stream or sys.stderr
-        styled_title = f"\033[1;31m✘ {title}\033[0m"
-        render_panel(title=styled_title, lines=lines, border_color="1;31", stream=out)
-
-    def prompt_input(message: str, default: str = "", **kwargs: Any) -> str:
-        prompt_str = f"{message} [{default}]: " if default else f"{message}: "
-        try:
-            val = input(prompt_str).strip()
-            return val or default
-        except (EOFError, KeyboardInterrupt):
-            return default
-
-    def confirm_input(message: str, default: bool = False, **kwargs: Any) -> bool:
-        hint = "Y/n" if default else "y/N"
-        try:
-            val = input(f"{message} ({hint}): ").strip().lower()
-            if not val:
-                return default
-            return val in ("y", "yes")
-        except (EOFError, KeyboardInterrupt):
-            return default
-
-    def select_menu(
-        title: str, options: Sequence[Any], default_index: int = 0, **kwargs: Any
-    ) -> str:
-        items = []
-        for opt in options:
-            if isinstance(opt, (list, tuple)):
-                items.append((str(opt[0]), str(opt[1])))
-            else:
-                items.append((str(opt), str(opt)))
-        if not items:
-            return ""
-        print(f"\n\033[1m{title}\033[0m")
-        for idx, (_, lbl) in enumerate(items, 1):
-            print(f"  {idx}) {lbl}")
-        try:
-            ans = input(f"Select option [1-{len(items)}]: ").strip()
-            if ans.isdigit() and 1 <= int(ans) <= len(items):
-                return items[int(ans) - 1][0]
-            return items[default_index][0]
-        except (EOFError, KeyboardInterrupt):
-            return ""
-
-    def multiselect_menu(
-        title: str, options: Sequence[Any], **kwargs: Any
-    ) -> list[str]:
-        return []
-
-    class FallbackUI:
-        def __init__(self, app_name: str = "lantern", icon: str = "🏮") -> None:
-            self.app_name = app_name
-            self.icon = icon
-            self.stream = sys.stdout
-
-        def badge(self) -> str:
-            return f"\033[1;36m[{self.icon} {self.app_name}]\033[0m"
-
-        def bold(self, text: str) -> str:
-            return f"\033[1m{text}\033[0m"
-
-        def dim(self, text: str) -> str:
-            return f"\033[2m{text}\033[0m"
-
-        def blue(self, text: str) -> str:
-            return f"\033[1;34m{text}\033[0m"
-
-        def cyan(self, text: str) -> str:
-            return f"\033[0;36m{text}\033[0m"
-
-        def bold_cyan(self, text: str) -> str:
-            return f"\033[1;36m{text}\033[0m"
-
-        def green(self, text: str) -> str:
-            return f"\033[0;32m{text}\033[0m"
-
-        def bold_green(self, text: str) -> str:
-            return f"\033[1;32m{text}\033[0m"
-
-        def yellow(self, text: str) -> str:
-            return f"\033[1;33m{text}\033[0m"
-
-        def red(self, text: str) -> str:
-            return f"\033[1;31m{text}\033[0m"
-
-        def magenta(self, text: str) -> str:
-            return f"\033[1;35m{text}\033[0m"
-
-        def success(self, msg: str) -> None:
-            print(f"{self.badge()} \033[32m✔\033[0m {msg}")
-
-        def info(self, msg: str, symbol: str = "ℹ️") -> None:
-            print(f"{self.badge()} \033[36m{symbol}\033[0m {msg}")
-
-        def warn(self, msg: str) -> None:
-            print(f"{self.badge()} \033[33m⚠\033[0m {msg}")
-
-        def error(self, msg: str) -> None:
-            print(f"{self.badge()} \033[31m✗\033[0m {msg}", file=sys.stderr)
-
-        def action(self, msg: str, symbol: str = "⚡") -> None:
-            print(f"{self.badge()} \033[36m{symbol}\033[0m {msg}")
-
-        def set_color_mode(self, mode: str) -> None:
-            pass
-
-        def panel(
-            self,
-            title: str,
-            lines: Sequence[str] | str,
-            border_color: str = "0;36",
-            width: int = 76,
-        ) -> None:
-            render_panel(
-                title=title,
-                lines=lines,
-                border_color=border_color,
-                width=width,
-                stream=sys.stdout,
-            )
-
-        def error_panel(self, title: str, lines: Sequence[str] | str) -> None:
-            render_error_panel(title=title, lines=lines)
-
-        def select(
-            self,
-            title: str,
-            options: Sequence[Any],
-            default_index: int = 0,
-        ) -> str:
-            return select_menu(
-                title=title, options=options, default_index=default_index
-            )
-
-        def prompt(self, message: str, default: str = "") -> str:
-            return prompt_input(message=message, default=default)
-
-        def confirm(self, message: str, default: bool = False) -> bool:
-            return confirm_input(message=message, default=default)
-
-    _raw_ui = FallbackUI()
-    Spinner = Any  # type: ignore
-    spinner_context = None  # type: ignore
-
-
-class LanternUIProxy:
-    """Agent-aware proxy for Prism UI / Fallback UI.
-
-    When agent mode or JSON mode is active:
-    - Suppresses ASCII box border frames and decorative banners.
-    - Suppresses interactive prompts (non-blocking fallback to defaults).
-    - Emits compact, token-efficient text or structured JSON payloads.
-    - Strips ANSI colors when communicating with LLM agents.
-    """
-
-    def __init__(self, base_ui: Any) -> None:
-        self._base = base_ui
-        self._agent_mode = self.check_agent_env()
-        self._json_mode = False
-
-    @staticmethod
-    def check_agent_env() -> bool:
-        for env_var in ("LANTERN_AGENT_MODE", "ICEBERG_AGENT_MODE", "AGENT_MODE"):
-            val = os.environ.get(env_var, "").lower()
-            if val in ("1", "true", "yes", "on"):
-                return True
-        return False
-
-    def set_agent_mode(self, agent: bool = True, json_output: bool = False) -> None:
-        self._agent_mode = agent
-        self._json_mode = json_output
-
-    @property
-    def is_agent(self) -> bool:
-        return self._agent_mode
-
-    @property
-    def is_json(self) -> bool:
-        return self._json_mode
-
-    def badge(self) -> str:
-        if self._agent_mode:
-            return "[lantern]"
-        return (
-            self._base.badge()
-            if hasattr(self._base, "badge")
-            else "\033[1;36m[🏮 lantern]\033[0m"
-        )
-
-    def panel(
-        self,
-        title: str,
-        lines: Sequence[str] | str,
-        border_color: str = "0;36",
-        width: int = 76,
-    ) -> None:
-        if self._json_mode:
-            return
-        if self._agent_mode:
-            clean_title = strip_emojis(strip_ansi(title)).strip()
-            if clean_title:
-                print(f"[{clean_title}]")
-            body = lines.splitlines() if isinstance(lines, str) else list(lines)
-            for line in body:
-                print(strip_emojis(strip_ansi(line)))
-            return
-        if hasattr(self._base, "panel"):
-            self._base.panel(
-                title=title, lines=lines, border_color=border_color, width=width
-            )
-        else:
-            render_panel(
-                title=title, lines=lines, border_color=border_color, width=width
-            )
-
-    def error_panel(self, title: str, lines: Sequence[str] | str) -> None:
-        if self._json_mode:
-            return
-        if self._agent_mode:
-            clean_title = strip_emojis(strip_ansi(title)).strip()
-            print(f"ERROR: {clean_title}", file=sys.stderr)
-            body = lines.splitlines() if isinstance(lines, str) else list(lines)
-            for line in body:
-                print(strip_emojis(strip_ansi(line)), file=sys.stderr)
-            return
-        if hasattr(self._base, "error_panel"):
-            self._base.error_panel(title=title, lines=lines)
-        else:
-            render_error_panel(title=title, lines=lines)
-
-    def action(self, msg: str, symbol: str = "⚡") -> None:
-        if self._json_mode:
-            return
-        if self._agent_mode:
-            print(f"[lantern] {strip_emojis(strip_ansi(msg))}")
-            return
-        if hasattr(self._base, "action"):
-            self._base.action(msg, symbol=symbol)
-        else:
-            print(f"{self.badge()} \033[36m{symbol}\033[0m {msg}")
-
-    def info(self, msg: str, symbol: str = "ℹ️") -> None:
-        if self._json_mode:
-            return
-        if self._agent_mode:
-            print(f"[lantern] {strip_emojis(strip_ansi(msg))}")
-            return
-        if hasattr(self._base, "info"):
-            self._base.info(msg, symbol=symbol)
-        else:
-            print(f"{self.badge()} \033[36m{symbol}\033[0m {msg}")
-
-    def success(self, msg: str) -> None:
-        if self._json_mode:
-            return
-        if self._agent_mode:
-            print(f"[lantern:ok] {strip_emojis(strip_ansi(msg))}")
-            return
-        if hasattr(self._base, "success"):
-            self._base.success(msg)
-        else:
-            print(f"{self.badge()} \033[32m✔\033[0m {msg}")
-
-    def warn(self, msg: str) -> None:
-        if self._json_mode:
-            return
-        if self._agent_mode:
-            print(f"[lantern:warn] {strip_emojis(strip_ansi(msg))}", file=sys.stderr)
-            return
-        if hasattr(self._base, "warn"):
-            self._base.warn(msg)
-        else:
-            print(f"{self.badge()} \033[33m⚠\033[0m {msg}")
-
-    def error(self, msg: str) -> None:
-        if self._json_mode:
-            import json
-
-            print(
-                json.dumps(
-                    {"status": "error", "message": strip_emojis(strip_ansi(msg))}
-                ),
-                file=sys.stderr,
-            )
-            return
-        if self._agent_mode:
-            print(
-                f"[lantern:error] {strip_emojis(strip_ansi(msg))}", file=sys.stderr
-            )
-            return
-        if hasattr(self._base, "error"):
-            self._base.error(msg)
-        else:
-            print(f"{self.badge()} \033[31m✗\033[0m {msg}", file=sys.stderr)
-
-    def prompt(self, message: str, default: str = "") -> str:
-        if self._agent_mode:
-            return default
-        if hasattr(self._base, "prompt"):
-            return self._base.prompt(message=message, default=default)
-        return prompt_input(message=message, default=default)
-
-    def confirm(self, message: str, default: bool = False) -> bool:
-        if self._agent_mode:
-            return default
-        if hasattr(self._base, "confirm"):
-            return self._base.confirm(message=message, default=default)
-        return confirm_input(message=message, default=default)
-
-    def select(
-        self,
-        title: str,
-        options: Sequence[Any],
-        default_index: int = 0,
-    ) -> str:
-        if self._agent_mode:
-            if not options:
-                return ""
-            first = options[default_index]
-            return str(first[0] if isinstance(first, (list, tuple)) else first)
-        if hasattr(self._base, "select"):
-            return self._base.select(
-                title=title, options=options, default_index=default_index
-            )
-        return select_menu(title=title, options=options, default_index=default_index)
-
-    def render_help(
-        self,
-        tagline: str,
-        usage: Sequence[str] | str,
-        commands: Sequence[tuple[str, str]] | dict[str, str] | None = None,
-        options: Sequence[tuple[str, str]] | dict[str, str] | None = None,
-        sections: Sequence[tuple[str, Sequence[tuple[str, str]] | str]] | None = None,
-        examples: Sequence[tuple[str, str]] | Sequence[str] | None = None,
-        version: str | None = None,
-        app_name: str | None = None,
-        is_agent: bool | None = None,
-    ) -> str:
-        name = app_name or "Lantern"
-        agent = is_agent if is_agent is not None else self._agent_mode
-        try:
-            from prism.help import render_help
-
-            return render_help(
-                app_name=name,
-                tagline=tagline,
-                usage=usage,
-                commands=commands,
-                options=options,
-                sections=sections,
-                examples=examples,
-                version=version,
-                is_agent=agent,
-            )
-        except Exception:
-            lines: list[str] = []
-            clean_tagline = tagline.strip()
-            v_str = f" v{version}" if version else ""
-            if agent:
-                lines.append(f"{name}{v_str} - {clean_tagline}")
-            else:
-                lines.append(f"{self.badge()} {self.bold(f'{clean_tagline}{v_str}')}")
-
-            u_list = [usage] if isinstance(usage, str) else list(usage)
-            if u_list:
+    except Exception:
+        lines: list[str] = []
+        clean_tagline = tagline.strip()
+        v_str = f" v{version}" if version else ""
+        if agent:
+            lines.append(f"{name}{v_str} - {clean_tagline}")
+            if usage:
                 lines.append("")
-                lines.append("Usage:" if agent else self.blue("Usage:"))
+                u_list = [usage] if isinstance(usage, str) else list(usage)
+                lines.append(f"Usage: {u_list[0]}")
+                for u in u_list[1:]:
+                    lines.append(f"       {u}")
+            if commands:
+                lines.append("\nCommands:")
+                cmd_dict = (
+                    dict(commands)
+                    if isinstance(commands, (list, tuple))
+                    else commands
+                )
+                for k, v in cmd_dict.items():
+                    lines.append(f"  {k:<20} {v}")
+            if options:
+                lines.append("\nOptions:")
+                opt_dict = (
+                    dict(options)
+                    if isinstance(options, (list, tuple))
+                    else options
+                )
+                for k, v in opt_dict.items():
+                    lines.append(f"  {k:<20} {v}")
+            if sections:
+                for s_title, s_items in sections:
+                    lines.append(f"\n{s_title}:")
+                    s_dict = (
+                        dict(s_items)
+                        if isinstance(s_items, (list, tuple))
+                        else s_items
+                    )
+                    for k, v in s_dict.items():
+                        lines.append(f"  {k:<12} {v}")
+            return "\n".join(lines) + "\n"
+        else:
+            lines.append(f"{ui.badge()} {ui.bold(f'{clean_tagline}{v_str}')}")
+            if usage:
+                lines.append(f"\n{ui.blue('Usage:')}")
+                u_list = [usage] if isinstance(usage, str) else list(usage)
                 for u in u_list:
                     lines.append(f"  {u}")
-
             if commands:
-                lines.append("")
-                lines.append("Commands:" if agent else self.blue("Commands:"))
-                cmd_items = commands.items() if isinstance(commands, dict) else commands
-                for k, v in cmd_items:
-                    lines.append(f"  {k:<22} {v}")
-
-            if sections:
-                for title, content in sections:
-                    lines.append("")
-                    lines.append(f"{title}:" if agent else self.blue(f"{title}:"))
-                    if isinstance(content, str):
-                        lines.append(content)
-                    else:
-                        for k, v in content:
-                            lines.append(f"  {k:<22} {v}")
-
+                lines.append(f"\n{ui.blue('Commands:')}")
+                cmd_dict = (
+                    dict(commands)
+                    if isinstance(commands, (list, tuple))
+                    else commands
+                )
+                for k, v in cmd_dict.items():
+                    lines.append(f"  {k:<20} {v}")
             if options:
-                lines.append("")
-                lines.append("Options:" if agent else self.blue("Options:"))
-                opt_items = options.items() if isinstance(options, dict) else options
-                for k, v in opt_items:
-                    lines.append(f"  {k:<22} {v}")
-
-            if examples:
-                lines.append("")
-                lines.append("Examples:" if agent else self.blue("Examples:"))
-                for ex in examples:
-                    cmd, cmt = ex if isinstance(ex, tuple) else (ex, "")
-                    if cmt:
-                        lines.append(f"  {cmd:<38} # {cmt}")
-                    else:
-                        lines.append(f"  {cmd}")
-
+                lines.append(f"\n{ui.blue('Options:')}")
+                opt_dict = (
+                    dict(options)
+                    if isinstance(options, (list, tuple))
+                    else options
+                )
+                for k, v in opt_dict.items():
+                    lines.append(f"  {k:<20} {v}")
+            if sections:
+                for s_title, s_items in sections:
+                    lines.append(f"\n{ui.blue(f'{s_title}:')}")
+                    s_dict = (
+                        dict(s_items)
+                        if isinstance(s_items, (list, tuple))
+                        else s_items
+                    )
+                    for k, v in s_dict.items():
+                        lines.append(f"  {ui.bold(k):<20} {v}")
             return "\n".join(lines) + "\n"
 
-    def status_card(
-        self,
-        title: str,
-        target: str | None = None,
-        url: str | None = None,
-        details: Sequence[tuple[str, str]] | dict[str, str] | None = None,
-        controls: Sequence[tuple[str, str]] | None = None,
-        warning: str | None = None,
-        tip: str | None = None,
-        border_color: str = "1;36",
-        width: int = 76,
-    ) -> None:
-        if hasattr(self._base, "status_card"):
-            self._base.status_card(
-                title=title,
-                target=target,
-                url=url,
-                details=details,
-                controls=controls,
-                warning=warning,
-                tip=tip,
-                border_color=border_color,
-                width=width,
-            )
-        else:
-            try:
-                from prism.cards import render_status_card
 
-                render_status_card(
-                    title=title,
-                    target=target,
-                    url=url,
-                    details=details,
-                    controls=controls,
-                    warning=warning,
-                    tip=tip,
-                    border_color=border_color,
-                    width=width,
-                )
-            except Exception:
-                self.panel(title, [f"URL: {url}", f"Target: {target}"])
-
-    def __getattr__(self, name: str) -> Any:
-        attr = getattr(self._base, name)
-        if (
-            self._agent_mode
-            and callable(attr)
-            and name
-            in (
-                "bold",
-                "dim",
-                "blue",
-                "cyan",
-                "bold_cyan",
-                "green",
-                "bold_green",
-                "yellow",
-                "red",
-                "magenta",
-            )
-        ):
-            return lambda text: str(text)
-        return attr
-
-
-ui = LanternUIProxy(_raw_ui)
+ui.render_help = _render_help  # type: ignore
 
 __all__ = [
     "ui",
     "UI",
-    "LanternUIProxy",
     "Spinner",
     "spinner_context",
+    "add_agent_args",
+    "apply_agent_args",
+    "handle_agent_args",
     "add_color_args",
     "apply_color_args",
     "handle_color_args",
+    "handle_version_arg",
+    "render_help",
     "render_panel",
     "render_error_panel",
+    "render_status_card",
     "prompt_input",
     "confirm_input",
     "select_menu",
@@ -594,4 +193,6 @@ __all__ = [
     "strip_ansi",
     "visual_len",
     "get_terminal_columns",
+    "get_agent_env",
+    "get_json_env",
 ]
