@@ -429,15 +429,11 @@ def cmd_status(args: argparse.Namespace | None = None) -> int:
             barograph_status = ui.yellow("✓ CLI available in PATH (subprocess mode)")
             baro_mode = "cli"
 
-    prism_active = False
-    try:
-        import prism  # type: ignore
+    import prism  # type: ignore
 
-        prism_ver = getattr(prism, "__version__", "loaded")
-        prism_status = ui.green(f"✓ Native Prism active (v{prism_ver})")
-        prism_active = True
-    except ImportError:
-        prism_status = ui.yellow("ANSI Fallback")
+    prism_ver = getattr(prism, "__version__", "loaded")
+    prism_status = ui.green(f"✓ Native Prism active (v{prism_ver})")
+    prism_active = True
 
     compiler = LanternCompiler()
     templates = [
