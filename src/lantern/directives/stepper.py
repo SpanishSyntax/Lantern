@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 from lantern.directives.utils import extract_directive_blocks
@@ -17,7 +17,9 @@ class StepperBlockProcessor(BlockProcessor):
         r"^:::\s*stepper(?:\s+(?P<args>.*))?$",
         re.IGNORECASE,
     )
-    STEP_SEP_RE = re.compile(r"^===\s*(?:Step\s*\d+[:.]?\s*)?(?P<title>.*?)\s*$", re.IGNORECASE)
+    STEP_SEP_RE = re.compile(
+        r"^===\s*(?:Step\s*\d+[:.]?\s*)?(?P<title>.*?)\s*$", re.IGNORECASE
+    )
 
     _counter = 0
 

@@ -3,9 +3,7 @@
 import threading
 import time
 import urllib.request
-from pathlib import Path
 
-import pytest
 from lantern.cli import main
 from lantern.compiler import LanternCompiler
 from lantern.config import SiteConfig
@@ -37,9 +35,15 @@ nav:
     algos_dir.mkdir(parents=True)
 
     (content_dir / "index.md").write_text("# Home Portal\nWelcome.", encoding="utf-8")
-    (algos_dir / "gd.md").write_text("# Gradient Descent\nProse here.", encoding="utf-8")
-    (algos_dir / "newton.md").write_text("# Newton Method\nProse here.", encoding="utf-8")
-    (algos_dir / "gd.css").write_text(".gd-highlight { color: cyan; }", encoding="utf-8")
+    (algos_dir / "gd.md").write_text(
+        "# Gradient Descent\nProse here.", encoding="utf-8"
+    )
+    (algos_dir / "newton.md").write_text(
+        "# Newton Method\nProse here.", encoding="utf-8"
+    )
+    (algos_dir / "gd.css").write_text(
+        ".gd-highlight { color: cyan; }", encoding="utf-8"
+    )
 
     config = SiteConfig.load(site_yaml)
 
@@ -80,7 +84,7 @@ def test_site_config_auto_inference(tmp_path):
 
     (content_dir / "index.md").write_text("# Master Index\nContent.", encoding="utf-8")
     (algos_dir / "01_gd.md").write_text(
-        "---\ntitle: \"Gradient Descent\"\n---\n# GD", encoding="utf-8"
+        '---\ntitle: "Gradient Descent"\n---\n# GD', encoding="utf-8"
     )
     (algos_dir / "02_newton.md").write_text("# Newton-Raphson Method", encoding="utf-8")
     (quizzes_dir / "quiz.md").write_text("# Master Quiz", encoding="utf-8")
@@ -140,7 +144,9 @@ def test_multi_page_site_builder(tmp_path):
     algos_dir.mkdir(parents=True)
     styles_dir.mkdir(parents=True)
 
-    (styles_dir / "site.css").write_text(":root { --brand-color: #38bdf8; }", encoding="utf-8")
+    (styles_dir / "site.css").write_text(
+        ":root { --brand-color: #38bdf8; }", encoding="utf-8"
+    )
     (site_dir / "report.pdf").write_text("%PDF-1.4 mock pdf", encoding="utf-8")
 
     (site_dir / "site.yaml").write_text(
@@ -196,7 +202,7 @@ Second order curvature.
 
     # 2. Check index.html
     index_html = (dist_dir / "index.html").read_text(encoding="utf-8")
-    assert "href=\"algos/gd.html\"" in index_html  # rewritten .md -> .html
+    assert 'href="algos/gd.html"' in index_html  # rewritten .md -> .html
     assert "SC42056 Hub" in index_html
     assert "lantern-extra-css" in index_html
 
@@ -206,7 +212,7 @@ Second order curvature.
     assert "gd-specific" in gd_html
     assert "lantern-sibling-css" in gd_html
     # Rewritten links
-    assert "href=\"newton.html\"" in gd_html
+    assert 'href="newton.html"' in gd_html
     # KaTeX math preserved
     assert "$x_{k+1} = x_k - \\alpha \\nabla f(x_k)$" in gd_html
     # Breadcrumbs
@@ -241,7 +247,9 @@ nav:
         encoding="utf-8",
     )
 
-    (content_dir / "index.md").write_text("# Home Page\nWelcome to dev server.", encoding="utf-8")
+    (content_dir / "index.md").write_text(
+        "# Home Page\nWelcome to dev server.", encoding="utf-8"
+    )
     (algos_dir / "gd.css").write_text(".gd-theme { color: yellow; }", encoding="utf-8")
     (algos_dir / "gd.md").write_text("# GD Page\nLive dev content.", encoding="utf-8")
 
@@ -252,7 +260,9 @@ nav:
     )
 
     # Start server in background thread
-    server_thread = threading.Thread(target=server.start, kwargs={"open_browser": False}, daemon=True)
+    server_thread = threading.Thread(
+        target=server.start, kwargs={"open_browser": False}, daemon=True
+    )
     server_thread.start()
 
     # Wait until httpd is bound

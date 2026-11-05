@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 
@@ -78,7 +78,10 @@ class MetricsBlockProcessor(BlockProcessor):
         # Render Metrics Deck HTML
         deck = etree.SubElement(parent, "div")
         deck.set("class", "lantern-metrics-deck")
-        deck.set("style", f"display: grid; grid-template-columns: repeat({cols}, minmax(180px, 1fr)); gap: 1rem;")
+        deck.set(
+            "style",
+            f"display: grid; grid-template-columns: repeat({cols}, minmax(180px, 1fr)); gap: 1rem;",
+        )
 
         for label, val, badge in items:
             card = etree.SubElement(deck, "div")
@@ -98,7 +101,10 @@ class MetricsBlockProcessor(BlockProcessor):
             if badge:
                 badge_el = etree.SubElement(val_wrap, "span")
                 badge_el.set("class", f"lantern-badge lantern-badge-{badge}")
-                badge_el.set("style", "margin-bottom: 0; font-size: 0.7rem; padding: 0.15rem 0.5rem;")
+                badge_el.set(
+                    "style",
+                    "margin-bottom: 0; font-size: 0.7rem; padding: 0.15rem 0.5rem;",
+                )
                 badge_el.text = badge.title()
 
         return True

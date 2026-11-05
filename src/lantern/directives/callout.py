@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 from lantern.directives.utils import extract_directive_blocks

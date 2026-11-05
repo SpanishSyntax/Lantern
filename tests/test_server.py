@@ -1,8 +1,6 @@
 """Tests for Lantern dev server and SSE client hub."""
 
-from pathlib import Path
-import pytest
-from lantern.server import SSEClientQueue, find_available_port, LanternDevServer
+from lantern.server import LanternDevServer, SSEClientQueue, find_available_port
 
 
 def test_sse_hub():
@@ -42,7 +40,10 @@ def test_server_atomic_save_tolerance(tmp_path):
     import time
 
     doc = tmp_path / "test.md"
-    doc.write_text("# Initial Big Header\nLong content line 1\nLong content line 2\n", encoding="utf-8")
+    doc.write_text(
+        "# Initial Big Header\nLong content line 1\nLong content line 2\n",
+        encoding="utf-8",
+    )
     server = LanternDevServer(target_file=doc, port=9877)
 
     # Simulate editor atomic save that temporarily unlinks test.md before writing shorter content
@@ -62,7 +63,6 @@ def test_server_atomic_save_tolerance(tmp_path):
 
 def test_watcher_ignores_temp_and_handles_moved(tmp_path):
     """Ensure watcher ignores swap/backup files and handles atomic moved events."""
-    from watchdog.events import FileModifiedEvent, FileMovedEvent
     from lantern.server import WorkspaceWatcher
 
     doc = tmp_path / "test.md"

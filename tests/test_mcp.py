@@ -5,9 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 from lantern.cli import main
-from lantern.mcp import StdioMCPServer, TOOL_DEFINITIONS, execute_tool
+from lantern.mcp import StdioMCPServer, execute_tool
 
 
 def test_mcp_initialize() -> None:
@@ -78,11 +77,17 @@ def test_mcp_validation() -> None:
 
     # lantern_build validation
     assert execute_tool("lantern_build", {"path": ""})["status"] == "error"
-    assert execute_tool("lantern_build", {"path": "/nonexistent/test.md"})["status"] == "error"
+    assert (
+        execute_tool("lantern_build", {"path": "/nonexistent/test.md"})["status"]
+        == "error"
+    )
 
     # lantern_serve validation
     assert execute_tool("lantern_serve", {"path": ""})["status"] == "error"
-    assert execute_tool("lantern_serve", {"path": "/nonexistent/test.md"})["status"] == "error"
+    assert (
+        execute_tool("lantern_serve", {"path": "/nonexistent/test.md"})["status"]
+        == "error"
+    )
 
 
 def test_mcp_execute_unknown() -> None:
@@ -95,7 +100,9 @@ def test_mcp_new_and_build(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
 
     # 1. Test lantern_new via execute_tool
-    res_new = execute_tool("lantern_new", {"name": "sample_lab", "template": "explainer"})
+    res_new = execute_tool(
+        "lantern_new", {"name": "sample_lab", "template": "explainer"}
+    )
     assert res_new["status"] == "ok"
     proj_dir = tmp_path / "sample_lab"
     assert proj_dir.is_dir()
@@ -128,7 +135,9 @@ def test_mcp_tools_call_jsonrpc(tmp_path: Path, monkeypatch) -> None:
     server = StdioMCPServer()
 
     doc = tmp_path / "simple.md"
-    doc.write_text("# Test Simple Document\n\nHello from Lantern MCP test.", encoding="utf-8")
+    doc.write_text(
+        "# Test Simple Document\n\nHello from Lantern MCP test.", encoding="utf-8"
+    )
 
     req = {
         "jsonrpc": "2.0",

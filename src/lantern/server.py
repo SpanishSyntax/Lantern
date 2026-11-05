@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import http.server
 import mimetypes
-import os
 import queue
 import socket
 import sys
@@ -111,7 +110,11 @@ class LanternDevHandler(http.server.BaseHTTPRequestHandler):
             ]
             for s_dir in search_dirs:
                 cand = (s_dir / path.lstrip("/")).resolve()
-                if cand.exists() and cand.is_file() and str(cand).startswith(str(s_dir)):
+                if (
+                    cand.exists()
+                    and cand.is_file()
+                    and str(cand).startswith(str(s_dir))
+                ):
                     self.serve_static_file(cand)
                     return
 
@@ -125,7 +128,9 @@ class LanternDevHandler(http.server.BaseHTTPRequestHandler):
             return
 
         # Workspace relative files (e.g. images, local datasets)
-        workspace_file = (self.server_instance.workspace_dir / path.lstrip("/")).resolve()
+        workspace_file = (
+            self.server_instance.workspace_dir / path.lstrip("/")
+        ).resolve()
         if (
             workspace_file.exists()
             and workspace_file.is_file()
@@ -198,7 +203,9 @@ class LanternDevHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(encoded)
         except Exception as exc:
-            err_msg = f"Lantern Multi-Page Error ({rel_html_path}):\n{exc}".encode("utf-8")
+            err_msg = f"Lantern Multi-Page Error ({rel_html_path}):\n{exc}".encode(
+                "utf-8"
+            )
             self.send_response(500)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.send_header("Content-Length", str(len(err_msg)))
@@ -378,7 +385,9 @@ class LanternDevServer:
             if rel_html_path == "index.html" and self.site_config.pages:
                 matching_page = self.site_config.pages[0]
             else:
-                raise FileNotFoundError(f"Page not found in navigation: {rel_html_path}")
+                raise FileNotFoundError(
+                    f"Page not found in navigation: {rel_html_path}"
+                )
 
         text = self._read_file_safe(matching_page.src_path)
 
@@ -392,16 +401,20 @@ class LanternDevServer:
 
         # Calculate root_path relative prefix
         rel_parts = Path(matching_page.rel_html_path).parent.parts
-        root_path = ("../" * len(rel_parts)) if (rel_parts and rel_parts != (".",)) else ""
+        root_path = (
+            ("../" * len(rel_parts)) if (rel_parts and rel_parts != (".",)) else ""
+        )
 
         # Adjust breadcrumbs
         adjusted_crumbs: list[dict[str, str | None]] = []
         for crumb in matching_page.breadcrumbs:
             c_url = crumb.get("url")
-            adjusted_crumbs.append({
-                "title": str(crumb["title"]),
-                "url": f"{root_path}{c_url}" if c_url else None,
-            })
+            adjusted_crumbs.append(
+                {
+                    "title": str(crumb["title"]),
+                    "url": f"{root_path}{c_url}" if c_url else None,
+                }
+            )
 
         # Adjust prev / next
         adj_prev = None
@@ -455,11 +468,15 @@ class LanternDevServer:
                 if changed_path.name in ("site.yaml", "site.yml"):
                     self.site_config = SiteConfig.load(self.target_orig)
                 self.sse_hub.broadcast_reload()
-                print(f"\033[36m[Lantern]\033[0m Modified: {changed_path.name} → Reloading browser")
+                print(
+                    f"\033[36m[Lantern]\033[0m Modified: {changed_path.name} → Reloading browser"
+                )
             else:
                 self.get_latest_html()
                 self.sse_hub.broadcast_reload()
-                print(f"\033[36m[Lantern]\033[0m Modified: {changed_path.name} → Reloading browser")
+                print(
+                    f"\033[36m[Lantern]\033[0m Modified: {changed_path.name} → Reloading browser"
+                )
         except Exception as e:
             print(f"\033[31m[Lantern] Recompile Error:\033[0m {e}", file=sys.stderr)
 
@@ -487,7 +504,9 @@ class LanternDevServer:
                     if ch in ("q", "Q", "\x03"):  # 'q' or Ctrl+C
                         self.stop_event.set()
                         if self.httpd:
-                            threading.Thread(target=self.httpd.shutdown, daemon=True).start()
+                            threading.Thread(
+                                target=self.httpd.shutdown, daemon=True
+                            ).start()
                         break
                     elif ch in ("r", "R"):
                         try:
@@ -496,12 +515,19 @@ class LanternDevServer:
                             else:
                                 self.get_latest_html()
                                 self.sse_hub.broadcast_reload()
-                            print("\r\033[K\033[36m[Lantern]\033[0m Manual refresh triggered → Reloading browser")
+                            print(
+                                "\r\033[K\033[36m[Lantern]\033[0m Manual refresh triggered → Reloading browser"
+                            )
                         except Exception as e:
-                            print(f"\r\033[K\033[31m[Lantern] Refresh Error:\033[0m {e}", file=sys.stderr)
+                            print(
+                                f"\r\033[K\033[31m[Lantern] Refresh Error:\033[0m {e}",
+                                file=sys.stderr,
+                            )
                     elif ch in ("o", "O"):
                         webbrowser.open(url)
-                        print(f"\r\033[K\033[36m[Lantern]\033[0m Opened {url} in browser")
+                        print(
+                            f"\r\033[K\033[36m[Lantern]\033[0m Opened {url} in browser"
+                        )
         except Exception:
             pass
         finally:
@@ -527,7 +553,9 @@ class LanternDevServer:
             (LanternDevHandler,),
             {"server_instance": self},
         )
-        self.httpd = http.server.ThreadingHTTPServer((self.host, self.port), handler_cls)
+        self.httpd = http.server.ThreadingHTTPServer(
+            (self.host, self.port), handler_cls
+        )
         self.port = self.httpd.server_address[1]
 
         url = f"http://{self.host}:{self.port}"
@@ -536,7 +564,9 @@ class LanternDevServer:
             threading.Timer(0.3, lambda: webbrowser.open(url)).start()
 
         # Start keyboard listener in background daemon thread
-        kb_thread = threading.Thread(target=self._listen_keyboard, args=(url,), daemon=True)
+        kb_thread = threading.Thread(
+            target=self._listen_keyboard, args=(url,), daemon=True
+        )
         kb_thread.start()
 
         try:

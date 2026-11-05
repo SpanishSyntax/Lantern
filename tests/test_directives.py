@@ -1,13 +1,11 @@
 """Comprehensive tests for Lantern's 3 component directive families."""
 
-from pathlib import Path
-import pytest
 from lantern.compiler import LanternCompiler
-
 
 # =========================================================================
 # Family 1: Layout & Spatial Chrome Tests
 # =========================================================================
+
 
 def test_grid_directive_presets():
     compiler = LanternCompiler()
@@ -114,6 +112,7 @@ Quadratic convergence.
 # Family 2: Interactive Controls & Lab Inputs Tests
 # =========================================================================
 
+
 def test_slider_directive():
     compiler = LanternCompiler()
     md = """
@@ -191,6 +190,7 @@ def test_player_directive():
 # =========================================================================
 # Family 3: Editorial Content & Feedback Tests
 # =========================================================================
+
 
 def test_metrics_directive():
     compiler = LanternCompiler()
@@ -350,9 +350,9 @@ ctx.fillRect(10, 10, 50, 50);
     html_out = compiler.compile(md)
     assert 'class="lantern-plot-wrapper lantern-widget-wrapper"' in html_out
     assert 'id="cart-lab"' in html_out
-    assert 'Cart Simulation' in html_out
-    assert 'canvas-cart-lab' in html_out
-    assert 'ctx.fillRect(10, 10, 50, 50);' in html_out
+    assert "Cart Simulation" in html_out
+    assert "canvas-cart-lab" in html_out
+    assert "ctx.fillRect(10, 10, 50, 50);" in html_out
 
 
 def test_math_plot_directive():
@@ -363,6 +363,6 @@ def test_math_plot_directive():
 """
     html_out = compiler.compile(md)
     assert 'class="lantern-plot-wrapper lantern-math-plot-wrapper"' in html_out
-    assert 'Harmonic Wave' in html_out
-    assert 'canvas-lantern-math-plot-' in html_out
-    assert 'Math.sin(omega * x)' in html_out
+    assert "Harmonic Wave" in html_out
+    assert "canvas-lantern-math-plot-" in html_out
+    assert "Math.sin(omega * x)" in html_out

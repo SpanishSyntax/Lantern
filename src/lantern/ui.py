@@ -79,7 +79,8 @@ except ImportError:
         title_clean = strip_ansi(title)
         title_seg = f" {title} " if title else ""
         top_fill = max(1, box_w - 3 - len(title_clean) - (2 if title else 0))
-        top = f"\033[{border_color}m╭─\033[0m{f'\033[1m{title_seg}\033[0m' if title else ''}\033[{border_color}m{'─' * top_fill}╮\033[0m"
+        title_hdr = f"\033[1m{title_seg}\033[0m" if title else ""
+        top = f"\033[{border_color}m╭─\033[0m{title_hdr}\033[{border_color}m{'─' * top_fill}╮\033[0m"
         bottom = f"\033[{border_color}m╰{'─' * (box_w - 2)}╯\033[0m"
         side = f"\033[{border_color}m│\033[0m"
         print(top, file=out)
@@ -145,7 +146,9 @@ except ImportError:
         except (EOFError, KeyboardInterrupt):
             return ""
 
-    def multiselect_menu(title: str, options: Sequence[Any], **kwargs: Any) -> list[str]:
+    def multiselect_menu(
+        title: str, options: Sequence[Any], **kwargs: Any
+    ) -> list[str]:
         return []
 
     class FallbackUI:
@@ -229,7 +232,9 @@ except ImportError:
             options: Sequence[Any],
             default_index: int = 0,
         ) -> str:
-            return select_menu(title=title, options=options, default_index=default_index)
+            return select_menu(
+                title=title, options=options, default_index=default_index
+            )
 
         def prompt(self, message: str, default: str = "") -> str:
             return prompt_input(message=message, default=default)
@@ -280,7 +285,11 @@ class LanternUIProxy:
     def badge(self) -> str:
         if self._agent_mode:
             return "[lantern]"
-        return self._base.badge() if hasattr(self._base, "badge") else "\033[1;36m[🏮 lantern]\033[0m"
+        return (
+            self._base.badge()
+            if hasattr(self._base, "badge")
+            else "\033[1;36m[🏮 lantern]\033[0m"
+        )
 
     def panel(
         self,
@@ -300,9 +309,13 @@ class LanternUIProxy:
             print()
             return
         if hasattr(self._base, "panel"):
-            self._base.panel(title=title, lines=lines, border_color=border_color, width=width)
+            self._base.panel(
+                title=title, lines=lines, border_color=border_color, width=width
+            )
         else:
-            render_panel(title=title, lines=lines, border_color=border_color, width=width)
+            render_panel(
+                title=title, lines=lines, border_color=border_color, width=width
+            )
 
     def error_panel(self, title: str, lines: Sequence[str] | str) -> None:
         if self._json_mode:
@@ -367,7 +380,10 @@ class LanternUIProxy:
         if self._json_mode:
             import json
 
-            print(json.dumps({"status": "error", "message": strip_ansi(msg)}), file=sys.stderr)
+            print(
+                json.dumps({"status": "error", "message": strip_ansi(msg)}),
+                file=sys.stderr,
+            )
             return
         if self._agent_mode:
             print(f"[lantern:error] {strip_ansi(msg)}", file=sys.stderr)
@@ -403,13 +419,29 @@ class LanternUIProxy:
             first = options[default_index]
             return str(first[0] if isinstance(first, (list, tuple)) else first)
         if hasattr(self._base, "select"):
-            return self._base.select(title=title, options=options, default_index=default_index)
+            return self._base.select(
+                title=title, options=options, default_index=default_index
+            )
         return select_menu(title=title, options=options, default_index=default_index)
 
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._base, name)
-        if self._agent_mode and callable(attr) and name in (
-            "bold", "dim", "blue", "cyan", "bold_cyan", "green", "bold_green", "yellow", "red", "magenta"
+        if (
+            self._agent_mode
+            and callable(attr)
+            and name
+            in (
+                "bold",
+                "dim",
+                "blue",
+                "cyan",
+                "bold_cyan",
+                "green",
+                "bold_green",
+                "yellow",
+                "red",
+                "magenta",
+            )
         ):
             return lambda text: str(text)
         return attr

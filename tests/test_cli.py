@@ -1,7 +1,5 @@
 """Tests for Lantern CLI commands and Prism interactive interface."""
 
-from pathlib import Path
-import pytest
 from lantern.cli import main
 
 

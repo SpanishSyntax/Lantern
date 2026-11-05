@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import html
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
-from markdown.blockprocessors import BlockProcessor
 
+from markdown.blockprocessors import BlockProcessor
 
 from lantern.directives.utils import extract_directive_blocks
 
@@ -45,9 +44,11 @@ class WidgetBlockProcessor(BlockProcessor):
         title = ""
 
         def extract_arg(param: str, default: str) -> str:
-            m = re.search(r'\b' + param + r'=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE)
+            m = re.search(
+                r"\b" + param + r'=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE
+            )
             if not m:
-                m = re.search(r'\b' + param + r'=([^\s]+)', args_str, re.IGNORECASE)
+                m = re.search(r"\b" + param + r"=([^\s]+)", args_str, re.IGNORECASE)
             return m.group(1).strip() if m else default
 
         widget_id = extract_arg("id", widget_id)

@@ -70,8 +70,18 @@ class LanternSiteBuilder:
 
         # 5. Copy non-markdown, non-css media assets from content_dir
         media_exts = {
-            ".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp",
-            ".json", ".csv", ".pdf", ".mp4", ".webm", ".wasm",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".svg",
+            ".gif",
+            ".webp",
+            ".json",
+            ".csv",
+            ".pdf",
+            ".mp4",
+            ".webm",
+            ".wasm",
         }
         if config.content_dir.exists():
             for root, _, files in os.walk(config.content_dir):
@@ -122,7 +132,9 @@ class LanternSiteBuilder:
         """Compile a single page into the destination directory."""
         # Calculate root_path relative prefix (e.g. "", "../", "../../")
         rel_parts = Path(page.rel_html_path).parent.parts
-        root_path = ("../" * len(rel_parts)) if (rel_parts and rel_parts != (".",)) else ""
+        root_path = (
+            ("../" * len(rel_parts)) if (rel_parts and rel_parts != (".",)) else ""
+        )
 
         # Prepare adjusted breadcrumbs
         adjusted_breadcrumbs: list[dict[str, str | None]] = []
@@ -132,10 +144,12 @@ class LanternSiteBuilder:
                 adj_url = f"{root_path}{crumb_url}"
             else:
                 adj_url = None
-            adjusted_breadcrumbs.append({
-                "title": str(crumb["title"]),
-                "url": adj_url,
-            })
+            adjusted_breadcrumbs.append(
+                {
+                    "title": str(crumb["title"]),
+                    "url": adj_url,
+                }
+            )
 
         # Prepare adjusted prev and next page links
         adj_prev = None

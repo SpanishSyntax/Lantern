@@ -222,11 +222,16 @@ class SiteConfig:
             elif (target_path / "site.yml").exists():
                 manifest_file = target_path / "site.yml"
                 root_dir = target_path
-            elif target_path.name == "content" and (target_path.parent / "site.yaml").exists():
+            elif (
+                target_path.name == "content"
+                and (target_path.parent / "site.yaml").exists()
+            ):
                 manifest_file = target_path.parent / "site.yaml"
                 root_dir = target_path.parent
             else:
-                root_dir = target_path.parent if target_path.name == "content" else target_path
+                root_dir = (
+                    target_path.parent if target_path.name == "content" else target_path
+                )
         else:
             root_dir = target_path.parent
 
@@ -252,7 +257,9 @@ class SiteConfig:
         else:
             out_p = (root_dir / "dist").resolve()
 
-        site_name = str(config_data.get("site_name") or root_dir.name.replace("_", " ").title())
+        site_name = str(
+            config_data.get("site_name") or root_dir.name.replace("_", " ").title()
+        )
         brand = str(config_data.get("brand") or site_name)
         brand_icon = str(config_data.get("brand_icon") or "🏮")
         template = str(config_data.get("template") or "explainer")
@@ -287,7 +294,9 @@ class SiteConfig:
         ]
         if clean_path.startswith("content/"):
             candidates.append((self.root_dir / clean_path).resolve())
-            candidates.append((self.content_dir / clean_path[len("content/") :]).resolve())
+            candidates.append(
+                (self.content_dir / clean_path[len("content/") :]).resolve()
+            )
 
         for c in candidates:
             if c.exists() and c.is_file():
@@ -375,7 +384,9 @@ class SiteConfig:
                             fm, auto_title = extract_frontmatter_and_title(resolved)
                             title = key.strip() if key else auto_title
                             rel_html = self._calculate_rel_html_path(resolved)
-                            crumbs = self._make_breadcrumbs(section_stack, title, rel_html)
+                            crumbs = self._make_breadcrumbs(
+                                section_stack, title, rel_html
+                            )
                             pages.append(
                                 PageMeta(
                                     title=title,
@@ -421,12 +432,22 @@ class SiteConfig:
         if not self.content_dir.exists():
             return pages
 
-        ignore_dirs = {".git", ".direnv", "node_modules", "dist", "build", "__pycache__", "result"}
+        ignore_dirs = {
+            ".git",
+            ".direnv",
+            "node_modules",
+            "dist",
+            "build",
+            "__pycache__",
+            "result",
+        }
 
         # Find all markdown files
         all_mds: list[Path] = []
         for root, dirs, files in os.walk(self.content_dir):
-            dirs[:] = [d for d in dirs if d not in ignore_dirs and not d.startswith(".")]
+            dirs[:] = [
+                d for d in dirs if d not in ignore_dirs and not d.startswith(".")
+            ]
             for f in files:
                 if f.endswith(".md") and not f.startswith((".", "#")):
                     all_mds.append((Path(root) / f).resolve())

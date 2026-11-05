@@ -29,7 +29,9 @@ class LanternCompiler:
             self.template_dir = Path(template_dir).resolve()
         else:
             try:
-                pkg_templates = importlib.resources.files("lantern").joinpath("templates")
+                pkg_templates = importlib.resources.files("lantern").joinpath(
+                    "templates"
+                )
                 self.template_dir = Path(str(pkg_templates))
             except Exception:
                 self.template_dir = Path(__file__).parent / "templates"
@@ -238,7 +240,9 @@ class LanternCompiler:
             context["lantern_js"] = self._read_static_asset("lantern.js")
             context["katex_css"] = self._read_static_asset("katex/katex.min.css")
             context["katex_js"] = self._read_static_asset("katex/katex.min.js")
-            context["katex_auto_render_js"] = self._read_static_asset("katex/contrib/auto-render.min.js")
+            context["katex_auto_render_js"] = self._read_static_asset(
+                "katex/contrib/auto-render.min.js"
+            )
 
         if extra_context:
             if "sibling_css" in extra_context and sibling_css:

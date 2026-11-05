@@ -135,7 +135,11 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
                     output_dir=out,
                     template_name=template,
                 )
-                files = [str(p.relative_to(out_path)) for p in out_path.rglob("*") if p.is_file()]
+                files = [
+                    str(p.relative_to(out_path))
+                    for p in out_path.rglob("*")
+                    if p.is_file()
+                ]
                 return {
                     "status": "ok",
                     "format": "jinja",
@@ -151,8 +155,13 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
                 if template:
                     site_config.template = template
                 builder = LanternSiteBuilder()
-                out_dir_path = builder.build(site_config=site_config, standalone=standalone)
-                html_files = [str(p.relative_to(out_dir_path)) for p in out_dir_path.rglob("*.html")]
+                out_dir_path = builder.build(
+                    site_config=site_config, standalone=standalone
+                )
+                html_files = [
+                    str(p.relative_to(out_dir_path))
+                    for p in out_dir_path.rglob("*.html")
+                ]
                 return {
                     "status": "ok",
                     "site_name": site_config.site_name,
@@ -208,7 +217,16 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
             launcher = shutil.which("lantern")
             if launcher:
-                cmd = [launcher, "serve", str(target), "-p", str(port), "--host", host, "--no-color"]
+                cmd = [
+                    launcher,
+                    "serve",
+                    str(target),
+                    "-p",
+                    str(port),
+                    "--host",
+                    host,
+                    "--no-color",
+                ]
             else:
                 cmd = [
                     sys.executable,

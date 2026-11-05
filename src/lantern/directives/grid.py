@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 from lantern.directives.utils import extract_directive_blocks
@@ -17,7 +17,9 @@ class GridBlockProcessor(BlockProcessor):
         r"^:::\s*grid(?:\s+(?P<args>.*))?$",
         re.IGNORECASE,
     )
-    COL_SEP_RE = re.compile(r"^(?:===\s*(?:\[(?P<bracket_title>.*?)\]|(?P<raw_title>.*?))?|---)\s*$")
+    COL_SEP_RE = re.compile(
+        r"^(?:===\s*(?:\[(?P<bracket_title>.*?)\]|(?P<raw_title>.*?))?|---)\s*$"
+    )
 
     PRESETS = {
         "50/50": "1fr 1fr",
@@ -51,7 +53,11 @@ class GridBlockProcessor(BlockProcessor):
 
         # Check presets
         for preset_name, css_val in self.PRESETS.items():
-            if re.search(r"(?:\b|^)" + re.escape(preset_name) + r"(?:\b|$)", args_str, re.IGNORECASE):
+            if re.search(
+                r"(?:\b|^)" + re.escape(preset_name) + r"(?:\b|$)",
+                args_str,
+                re.IGNORECASE,
+            ):
                 grid_cols = css_val
                 break
 
@@ -82,7 +88,9 @@ class GridBlockProcessor(BlockProcessor):
 
                 sep_match = self.COL_SEP_RE.match(lines[0].strip())
                 current_title = (
-                    sep_match.group("bracket_title") or sep_match.group("raw_title") or ""
+                    sep_match.group("bracket_title")
+                    or sep_match.group("raw_title")
+                    or ""
                 ).strip()
                 if len(lines) > 1:
                     current_col_blocks.append("\n".join(lines[1:]))
@@ -98,7 +106,9 @@ class GridBlockProcessor(BlockProcessor):
         # Render Grid HTML
         grid_div = etree.SubElement(parent, "div")
         grid_div.set("class", "lantern-grid-strip")
-        grid_div.set("style", f"display: grid; grid-template-columns: {grid_cols}; gap: {gap};")
+        grid_div.set(
+            "style", f"display: grid; grid-template-columns: {grid_cols}; gap: {gap};"
+        )
 
         for title, col_blocks in columns:
             col_div = etree.SubElement(grid_div, "div")

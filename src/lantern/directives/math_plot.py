@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import html
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 
@@ -44,9 +44,11 @@ class MathPlotBlockProcessor(BlockProcessor):
         title = ""
 
         def extract_arg(param: str, default: str) -> str:
-            m = re.search(r'\b' + param + r'=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE)
+            m = re.search(
+                r"\b" + param + r'=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE
+            )
             if not m:
-                m = re.search(r'\b' + param + r'=([^\s]+)', args_str, re.IGNORECASE)
+                m = re.search(r"\b" + param + r"=([^\s]+)", args_str, re.IGNORECASE)
             return m.group(1).strip() if m else default
 
         fn_expr = extract_arg("fn", fn_expr)
@@ -64,9 +66,17 @@ class MathPlotBlockProcessor(BlockProcessor):
             break
 
         # Parse domain
-        domain_parts = [p.strip() for p in domain_str.replace("[", "").replace("]", "").split(",")]
-        x_min = float(domain_parts[0]) if len(domain_parts) > 0 and domain_parts[0] else 0.0
-        x_max = float(domain_parts[1]) if len(domain_parts) > 1 and domain_parts[1] else 10.0
+        domain_parts = [
+            p.strip() for p in domain_str.replace("[", "").replace("]", "").split(",")
+        ]
+        x_min = (
+            float(domain_parts[0]) if len(domain_parts) > 0 and domain_parts[0] else 0.0
+        )
+        x_max = (
+            float(domain_parts[1])
+            if len(domain_parts) > 1 and domain_parts[1]
+            else 10.0
+        )
         if x_min >= x_max:
             x_max = x_min + 1.0
 

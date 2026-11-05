@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 
@@ -41,9 +41,11 @@ class PlayerBlockProcessor(BlockProcessor):
         speeds = "0.5x, 1x, 2x, 5x"
 
         def extract_arg(param: str, default: str) -> str:
-            m = re.search(r'\b' + param + r'=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE)
+            m = re.search(
+                r"\b" + param + r'=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE
+            )
             if not m:
-                m = re.search(r'\b' + param + r'=([^\s]+)', args_str, re.IGNORECASE)
+                m = re.search(r"\b" + param + r"=([^\s]+)", args_str, re.IGNORECASE)
             return m.group(1).strip() if m else default
 
         player_id = extract_arg("id", player_id)

@@ -10,9 +10,10 @@ import subprocess
 import sys
 import tempfile
 import traceback
+import xml.etree.ElementTree as etree
 from pathlib import Path
 from typing import Any
-import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 
@@ -27,7 +28,9 @@ class PlotBlockProcessor(BlockProcessor):
 
     _counter = 0
 
-    def __init__(self, parser: Any, compiler: Any = None, base_dir: Path | None = None) -> None:
+    def __init__(
+        self, parser: Any, compiler: Any = None, base_dir: Path | None = None
+    ) -> None:
         super().__init__(parser)
         self.compiler = compiler
         self.base_dir = Path(base_dir or os.getcwd()).resolve()
@@ -57,7 +60,9 @@ class PlotBlockProcessor(BlockProcessor):
         height = "520px"
         title = ""
 
-        b_match = re.search(r"backend=(plotly|svg|matplotlib|seaborn)", args_str, re.IGNORECASE)
+        b_match = re.search(
+            r"backend=(plotly|svg|matplotlib|seaborn)", args_str, re.IGNORECASE
+        )
         if b_match:
             backend = b_match.group(1).lower()
 
@@ -92,7 +97,9 @@ class PlotBlockProcessor(BlockProcessor):
         display_title = title
 
         # Execute and render figure
-        plot_html, has_plotly = self._render_plot(script_path, backend, height, display_title, plot_id)
+        plot_html, has_plotly = self._render_plot(
+            script_path, backend, height, display_title, plot_id
+        )
         if has_plotly and self.compiler is not None:
             self.compiler.has_plotly = True
 
@@ -104,7 +111,12 @@ class PlotBlockProcessor(BlockProcessor):
         return True
 
     def _render_plot(
-        self, script_path: Path, requested_backend: str, height: str, title: str, plot_id: str
+        self,
+        script_path: Path,
+        requested_backend: str,
+        height: str,
+        title: str,
+        plot_id: str,
     ) -> tuple[str, bool]:
         """Execute script via Barograph (in-process or subprocess fallback) and return (html, has_plotly)."""
         if not script_path.exists():
@@ -112,7 +124,7 @@ class PlotBlockProcessor(BlockProcessor):
                 f'<div class="lantern-callout lantern-callout-danger">'
                 f'<div class="lantern-callout-header"><span>✘</span><span>Plot Script Not Found</span></div>'
                 f'<div class="lantern-callout-body"><p>Referenced script <code>{html.escape(script_path.name)}</code> was not found at <code>{html.escape(str(script_path))}</code>.</p></div>'
-                f'</div>',
+                f"</div>",
                 False,
             )
 
@@ -124,7 +136,15 @@ class PlotBlockProcessor(BlockProcessor):
                 res = barograph.run_script(script_path)
                 fig = res.figure
                 detected = getattr(res, "backend", "generic")
-                return self._serialize_figure(fig, detected, requested_backend, height, title, plot_id, script_path)
+                return self._serialize_figure(
+                    fig,
+                    detected,
+                    requested_backend,
+                    height,
+                    title,
+                    plot_id,
+                    script_path,
+                )
         except Exception:
             pass
 
@@ -133,13 +153,29 @@ class PlotBlockProcessor(BlockProcessor):
             barograph_bin = "barograph"
             with tempfile.TemporaryDirectory() as tmpdir:
                 fmt = "svg" if requested_backend == "svg" else "html"
-                cmd = [barograph_bin, "build", str(script_path), "--format", fmt, "--out-dir", tmpdir]
-                proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=15)
+                cmd = [
+                    barograph_bin,
+                    "build",
+                    str(script_path),
+                    "--format",
+                    fmt,
+                    "--out-dir",
+                    tmpdir,
+                ]
+                proc = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=15,
+                )
                 if proc.returncode == 0:
                     out_files = list(Path(tmpdir).glob(f"*.{fmt}"))
                     if out_files:
                         content = out_files[0].read_text(encoding="utf-8")
-                        return self._wrap_raw_output(content, fmt, height, title, plot_id, script_path)
+                        return self._wrap_raw_output(
+                            content, fmt, height, title, plot_id, script_path
+                        )
         except Exception:
             pass
 
@@ -149,8 +185,10 @@ class PlotBlockProcessor(BlockProcessor):
 
             try:
                 import matplotlib  # type: ignore
+
                 matplotlib.use("Agg")
                 import matplotlib.pyplot as plt  # type: ignore
+
                 plt.close("all")
             except ImportError:
                 plt = None
@@ -169,7 +207,11 @@ class PlotBlockProcessor(BlockProcessor):
             for attr in ("fig", "figure", "plot", "dashboard"):
                 if attr in mod_globals:
                     val = mod_globals[attr]
-                    if callable(val) and not hasattr(val, "savefig") and not hasattr(val, "to_html"):
+                    if (
+                        callable(val)
+                        and not hasattr(val, "savefig")
+                        and not hasattr(val, "to_html")
+                    ):
                         try:
                             val = val()
                         except Exception:
@@ -182,14 +224,20 @@ class PlotBlockProcessor(BlockProcessor):
                     fig = plt.gcf()
 
             if fig is not None:
-                backend = "plotly" if hasattr(fig, "to_html") or hasattr(fig, "write_html") else "matplotlib"
-                return self._serialize_figure(fig, backend, requested_backend, height, title, plot_id, script_path)
+                backend = (
+                    "plotly"
+                    if hasattr(fig, "to_html") or hasattr(fig, "write_html")
+                    else "matplotlib"
+                )
+                return self._serialize_figure(
+                    fig, backend, requested_backend, height, title, plot_id, script_path
+                )
 
             return (
                 f'<div class="lantern-callout lantern-callout-warning">'
                 f'<div class="lantern-callout-header"><span>⚠</span><span>No Figure Detected</span></div>'
                 f'<div class="lantern-callout-body"><p>Script <code>{html.escape(script_path.name)}</code> executed without exporting a <code>fig</code> object or Matplotlib plot.</p></div>'
-                f'</div>',
+                f"</div>",
                 False,
             )
         except Exception:
@@ -198,7 +246,7 @@ class PlotBlockProcessor(BlockProcessor):
                 f'<div class="lantern-callout lantern-callout-danger">'
                 f'<div class="lantern-callout-header"><span>✘</span><span>Plot Execution Error ({html.escape(script_path.name)})</span></div>'
                 f'<div class="lantern-callout-body"><pre><code>{html.escape(tb)}</code></pre></div>'
-                f'</div>',
+                f"</div>",
                 False,
             )
 
@@ -213,10 +261,16 @@ class PlotBlockProcessor(BlockProcessor):
         script_path: Path,
     ) -> tuple[str, bool]:
         """Convert a live Python figure object into HTML or SVG markup."""
-        title_html = f'<span title="{html.escape(title)}">{html.escape(title)}</span>' if title else ""
+        title_html = (
+            f'<span title="{html.escape(title)}">{html.escape(title)}</span>'
+            if title
+            else ""
+        )
 
         # Plotly
-        if (requested_backend == "plotly" or detected_backend == "plotly") and (hasattr(fig, "to_html") or hasattr(fig, "write_html")):
+        if (requested_backend == "plotly" or detected_backend == "plotly") and (
+            hasattr(fig, "to_html") or hasattr(fig, "write_html")
+        ):
             if hasattr(fig, "layout"):
                 layout = getattr(fig, "layout", None)
                 if layout is not None and getattr(layout, "uirevision", None) is None:
@@ -231,10 +285,14 @@ class PlotBlockProcessor(BlockProcessor):
                     pass
 
             if hasattr(fig, "to_html"):
-                inner = fig.to_html(include_plotlyjs=False, full_html=False, default_height=height)
+                inner = fig.to_html(
+                    include_plotlyjs=False, full_html=False, default_height=height
+                )
             else:
                 buf = io.StringIO()
-                fig.write_html(buf, include_plotlyjs=False, full_html=False, default_height=height)
+                fig.write_html(
+                    buf, include_plotlyjs=False, full_html=False, default_height=height
+                )
                 inner = buf.getvalue()
 
             wrapped = f"""
@@ -280,15 +338,32 @@ class PlotBlockProcessor(BlockProcessor):
 
         # Raw string HTML / SVG
         if isinstance(fig, str):
-            return self._wrap_raw_output(fig, "svg" if "<svg" in fig else "html", height, title, plot_id, script_path)
+            return self._wrap_raw_output(
+                fig,
+                "svg" if "<svg" in fig else "html",
+                height,
+                title,
+                plot_id,
+                script_path,
+            )
 
         return (f"<p>Unhandled figure backend: {type(fig)}</p>", False)
 
     def _wrap_raw_output(
-        self, content: str, fmt: str, height: str, title: str, plot_id: str, script_path: Path
+        self,
+        content: str,
+        fmt: str,
+        height: str,
+        title: str,
+        plot_id: str,
+        script_path: Path,
     ) -> tuple[str, bool]:
         has_plotly = "plotly" in content.lower()
-        title_html = f'<span title="{html.escape(title)}">{html.escape(title)}</span>' if title else ""
+        title_html = (
+            f'<span title="{html.escape(title)}">{html.escape(title)}</span>'
+            if title
+            else ""
+        )
         wrapped = f"""
 <div class="lantern-plot-wrapper" id="{plot_id}">
   <div class="lantern-plot-header">

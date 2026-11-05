@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import argparse
-import os
 import platform
-import shutil
 import sys
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Sequence
 
 from lantern import __version__
 from lantern.compiler import LanternCompiler
@@ -19,9 +17,6 @@ from lantern.site import LanternSiteBuilder
 from lantern.ui import (
     add_color_args,
     handle_color_args,
-    prompt_input,
-    render_panel,
-    select_menu,
     ui,
 )
 
@@ -164,7 +159,9 @@ def cmd_build(args: argparse.Namespace) -> int:
         else:
             target_path = find_default_target()
             if not target_path:
-                ui.error("No markdown document or site.yaml specified and none found in current directory.")
+                ui.error(
+                    "No markdown document or site.yaml specified and none found in current directory."
+                )
                 return 1
     else:
         target_path = Path(target).resolve()
@@ -180,7 +177,9 @@ def cmd_build(args: argparse.Namespace) -> int:
     if is_site:
         out_dest = getattr(args, "output", "") or None
         site_config = SiteConfig.load(target=target_path, output_dir=out_dest)
-        template_name = getattr(args, "template", None) or site_config.template or "explainer"
+        template_name = (
+            getattr(args, "template", None) or site_config.template or "explainer"
+        )
         site_config.template = template_name
 
         ui.action(
@@ -215,7 +214,9 @@ def cmd_build(args: argparse.Namespace) -> int:
                 )
                 return 0
 
-            ui.success(f"Built Multi-Page Site to {ui.bold(str(rel))} ({len(html_files)} HTML pages)")
+            ui.success(
+                f"Built Multi-Page Site to {ui.bold(str(rel))} ({len(html_files)} HTML pages)"
+            )
             return 0
         except Exception as exc:
             ui.error(f"Site compilation failed: {exc}")
@@ -288,7 +289,9 @@ def cmd_export(args: argparse.Namespace) -> int:
     if not target:
         target_path = find_default_target()
         if not target_path:
-            ui.error("No markdown document specified and none found in current directory.")
+            ui.error(
+                "No markdown document specified and none found in current directory."
+            )
             return 1
     else:
         target_path = Path(target).resolve()
@@ -321,7 +324,9 @@ def cmd_export(args: argparse.Namespace) -> int:
                 template_name=template_name,
             )
 
-        files = [str(p.relative_to(out_path)) for p in out_path.rglob("*") if p.is_file()]
+        files = [
+            str(p.relative_to(out_path)) for p in out_path.rglob("*") if p.is_file()
+        ]
         rel = (
             out_path.relative_to(Path.cwd())
             if out_path.is_relative_to(Path.cwd())
@@ -345,7 +350,9 @@ def cmd_export(args: argparse.Namespace) -> int:
             )
             return 0
 
-        ui.success(f"Exported {export_format} bundle to {ui.bold(str(rel))} ({len(files)} files)")
+        ui.success(
+            f"Exported {export_format} bundle to {ui.bold(str(rel))} ({len(files)} files)"
+        )
         if not ui.is_agent:
             print(f"\n  {ui.dim('Deployment manual:')} {out_path}/README.md\n")
         return 0
@@ -369,7 +376,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
         else:
             target_path = find_default_target()
             if not target_path:
-                ui.error("No markdown document or site.yaml specified and none found in current directory.")
+                ui.error(
+                    "No markdown document or site.yaml specified and none found in current directory."
+                )
                 return 1
     else:
         target_path = Path(target).resolve()
@@ -392,7 +401,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     url = f"http://{server.host}:{server.port}"
     if server.is_site and server.site_config:
-        target_desc = f"{server.site_config.site_name} ({len(server.site_config.pages)} pages)"
+        target_desc = (
+            f"{server.site_config.site_name} ({len(server.site_config.pages)} pages)"
+        )
     else:
         target_desc = target_path.name
 
@@ -403,8 +414,12 @@ def cmd_serve(args: argparse.Namespace) -> int:
         f"Live Reload:  {ui.green('Active (SSE /_lantern/events)')}",
         f"Watching:     {server.workspace_dir}",
         "",
-        ui.yellow("⚠️  Ephemeral local dev server only. Not intended for production hosting."),
-        ui.dim("   For production hosting, compile with 'lantern build' or 'lantern export'."),
+        ui.yellow(
+            "⚠️  Ephemeral local dev server only. Not intended for production hosting."
+        ),
+        ui.dim(
+            "   For production hosting, compile with 'lantern build' or 'lantern export'."
+        ),
         "",
         f"Controls:     {ui.bold('[q]')} or {ui.bold('[Ctrl+C]')} to stop  |  {ui.bold('[r]')} reload  |  {ui.bold('[o]')} open",
     ]
@@ -498,9 +513,13 @@ def cmd_status(args: argparse.Namespace | None = None) -> int:
         lines.append(f"  • {ui.bold(tmpl)}")
 
     if docs:
-        lines.extend(["", f"{ui.bold('Active Document:')} {docs[0].name} ({docs[0].parent})"])
+        lines.extend(
+            ["", f"{ui.bold('Active Document:')} {docs[0].name} ({docs[0].parent})"]
+        )
         if len(docs) > 1:
-            lines.append(f"{ui.dim('Workspace Files:')} {', '.join(d.name for d in docs)}")
+            lines.append(
+                f"{ui.dim('Workspace Files:')} {', '.join(d.name for d in docs)}"
+            )
 
     ui.panel("🏮 LANTERN STATUS DASHBOARD", lines, border_color="1;36")
     return 0
@@ -640,18 +659,26 @@ def run_interactive_hub(docs: list[Path]) -> int:
         return 0
 
     if choice == "serve_first" and docs:
-        args = argparse.Namespace(file=str(docs[0]), port=8080, host="127.0.0.1", template="", no_open=False)
+        args = argparse.Namespace(
+            file=str(docs[0]), port=8080, host="127.0.0.1", template="", no_open=False
+        )
         return cmd_serve(args)
 
     if choice == "build_first" and docs:
-        args = argparse.Namespace(file=str(docs[0]), output="", standalone=True, template="")
+        args = argparse.Namespace(
+            file=str(docs[0]), output="", standalone=True, template=""
+        )
         return cmd_build(args)
 
     if choice == "export_first" and docs:
         fmt = ui.select(
             "Select export format:",
             [
-                ("static", "Static Web Bundle", "HTML + CSS/JS/KaTeX ready for Caddy/Nginx/Cloudflare"),
+                (
+                    "static",
+                    "Static Web Bundle",
+                    "HTML + CSS/JS/KaTeX ready for Caddy/Nginx/Cloudflare",
+                ),
                 ("jinja", "Jinja2 Server Project", "app.py + templates + Dockerfile"),
             ],
         )
@@ -667,7 +694,9 @@ def run_interactive_hub(docs: list[Path]) -> int:
         target = ui.select("Select document to serve:", options)
         if not target:
             return 0
-        args = argparse.Namespace(file=target, port=8080, host="127.0.0.1", template="", no_open=False)
+        args = argparse.Namespace(
+            file=target, port=8080, host="127.0.0.1", template="", no_open=False
+        )
         return cmd_serve(args)
 
     if choice == "select_build" and docs:
@@ -693,16 +722,30 @@ def run_interactive_hub(docs: list[Path]) -> int:
         if not Path(target).exists():
             ui.error(f"File not found: '{target}'")
             return 1
-        args = argparse.Namespace(file=target, port=8080, host="127.0.0.1", template="", no_open=False)
+        args = argparse.Namespace(
+            file=target, port=8080, host="127.0.0.1", template="", no_open=False
+        )
         return cmd_serve(args)
 
     if choice == "new":
         tmpl = ui.select(
             "Select starter template:",
             [
-                ("explainer", "Scientific Explainer", "Narrative deep-dive with 3D plot and parameter lab"),
-                ("dashboard", "Simulation Dashboard", "Multi-method simulation deck with control center"),
-                ("optimization", "Domain Optimization Lab", "Canvas descent walker, barrier boundary lab, Rosenbrock surface"),
+                (
+                    "explainer",
+                    "Scientific Explainer",
+                    "Narrative deep-dive with 3D plot and parameter lab",
+                ),
+                (
+                    "dashboard",
+                    "Simulation Dashboard",
+                    "Multi-method simulation deck with control center",
+                ),
+                (
+                    "optimization",
+                    "Domain Optimization Lab",
+                    "Canvas descent walker, barrier boundary lab, Rosenbrock surface",
+                ),
             ],
         )
         if not tmpl:
@@ -723,10 +766,16 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="lantern",
         add_help=False,
     )
-    parser.add_argument("-v", "-V", "--version", action="store_true", help="Show version")
+    parser.add_argument(
+        "-v", "-V", "--version", action="store_true", help="Show version"
+    )
     parser.add_argument("-h", "--help", action="store_true", help="Show help")
-    parser.add_argument("-A", "--agent", action="store_true", help="Compact agent-friendly output mode")
-    parser.add_argument("--json", action="store_true", help="Structured JSON output for MCP/agents")
+    parser.add_argument(
+        "-A", "--agent", action="store_true", help="Compact agent-friendly output mode"
+    )
+    parser.add_argument(
+        "--json", action="store_true", help="Structured JSON output for MCP/agents"
+    )
     add_color_args(parser)
 
     subparsers = parser.add_subparsers(dest="command")
@@ -734,34 +783,70 @@ def _build_parser() -> argparse.ArgumentParser:
     # new
     p_new = subparsers.add_parser("new", add_help=False)
     p_new.add_argument("name", nargs="?", default="", help="Workspace directory name")
-    p_new.add_argument("--template", "-t", choices=["explainer", "dashboard", "optimization"], default="explainer")
+    p_new.add_argument(
+        "--template",
+        "-t",
+        choices=["explainer", "dashboard", "optimization"],
+        default="explainer",
+    )
     p_new.add_argument("-A", "--agent", action="store_true")
     p_new.add_argument("--json", action="store_true")
     p_new.add_argument("-h", "--help", action="store_true")
 
     # build
     p_build = subparsers.add_parser("build", add_help=False)
-    p_build.add_argument("file", nargs="?", default="", help="Input markdown document, directory, or site.yaml")
-    p_build.add_argument("-o", "--output", default="", help="Output HTML destination or directory")
-    p_build.add_argument("--standalone", dest="standalone", action="store_true", default=None, help="Inline all CSS, KaTeX, and JS")
-    p_build.add_argument("--template", "-t", default="", help="Layout template override")
+    p_build.add_argument(
+        "file",
+        nargs="?",
+        default="",
+        help="Input markdown document, directory, or site.yaml",
+    )
+    p_build.add_argument(
+        "-o", "--output", default="", help="Output HTML destination or directory"
+    )
+    p_build.add_argument(
+        "--standalone",
+        dest="standalone",
+        action="store_true",
+        default=None,
+        help="Inline all CSS, KaTeX, and JS",
+    )
+    p_build.add_argument(
+        "--template", "-t", default="", help="Layout template override"
+    )
     p_build.add_argument("-A", "--agent", action="store_true")
     p_build.add_argument("--json", action="store_true")
     p_build.add_argument("-h", "--help", action="store_true")
 
     # export
     p_export = subparsers.add_parser("export", add_help=False)
-    p_export.add_argument("file", nargs="?", default="", help="Input markdown document to export")
-    p_export.add_argument("-o", "--output", default="", help="Output directory destination")
-    p_export.add_argument("--format", choices=["static", "jinja"], default="static", help="Export bundle format")
-    p_export.add_argument("--template", "-t", default="", help="Layout template override")
+    p_export.add_argument(
+        "file", nargs="?", default="", help="Input markdown document to export"
+    )
+    p_export.add_argument(
+        "-o", "--output", default="", help="Output directory destination"
+    )
+    p_export.add_argument(
+        "--format",
+        choices=["static", "jinja"],
+        default="static",
+        help="Export bundle format",
+    )
+    p_export.add_argument(
+        "--template", "-t", default="", help="Layout template override"
+    )
     p_export.add_argument("-A", "--agent", action="store_true")
     p_export.add_argument("--json", action="store_true")
     p_export.add_argument("-h", "--help", action="store_true")
 
     # serve
     p_serve = subparsers.add_parser("serve", add_help=False)
-    p_serve.add_argument("file", nargs="?", default="", help="Markdown document, directory, or site.yaml to watch and serve")
+    p_serve.add_argument(
+        "file",
+        nargs="?",
+        default="",
+        help="Markdown document, directory, or site.yaml to watch and serve",
+    )
     p_serve.add_argument("-p", "--port", type=int, default=8080, help="HTTP port")
     p_serve.add_argument("--host", default="127.0.0.1", help="HTTP host")
     p_serve.add_argument("--no-open", action="store_true", help="Do not open browser")
@@ -806,7 +891,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     # Global version intercept
-    if any(a in ("-V", "-v", "--version", "version") for a in raw_args) and len(raw_args) == 1:
+    if (
+        any(a in ("-V", "-v", "--version", "version") for a in raw_args)
+        and len(raw_args) == 1
+    ):
         if ui.is_json:
             import json
 
@@ -862,7 +950,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "new":
         if not args.name:
             if sys.stdin.isatty() and not ui.is_agent:
-                args.name = ui.prompt("Workspace directory name", default="my_explainer")
+                args.name = ui.prompt(
+                    "Workspace directory name", default="my_explainer"
+                )
             else:
                 ui.error("Missing required argument: <name>")
                 return 1

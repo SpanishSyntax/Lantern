@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 
@@ -42,9 +42,11 @@ class SelectBlockProcessor(BlockProcessor):
         default_val = ""
 
         def extract_arg(param: str, default: str) -> str:
-            m = re.search(r'\b' + param + r'=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE)
+            m = re.search(
+                r"\b" + param + r'=(?:["\'])(.*?)(?:["\'])', args_str, re.IGNORECASE
+            )
             if not m:
-                m = re.search(r'\b' + param + r'=([^\s]+)', args_str, re.IGNORECASE)
+                m = re.search(r"\b" + param + r"=([^\s]+)", args_str, re.IGNORECASE)
             return m.group(1).strip() if m else default
 
         sel_id = extract_arg("id", sel_id)
@@ -78,7 +80,9 @@ class SelectBlockProcessor(BlockProcessor):
             line = line.strip()
             item_match = self.ITEM_RE.match(line)
             if item_match:
-                options.append((item_match.group("val").strip(), item_match.group("label").strip()))
+                options.append(
+                    (item_match.group("val").strip(), item_match.group("label").strip())
+                )
 
         if not options:
             options = [("opt1", "Option 1"), ("opt2", "Option 2")]

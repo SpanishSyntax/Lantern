@@ -1,6 +1,5 @@
 """Tests for Lantern compiler, frontmatter parsing, and math preservation."""
 
-import pytest
 from lantern.compiler import LanternCompiler
 
 
@@ -61,8 +60,12 @@ def test_math_restoration_large():
     # Generate 500 inline and 500 display math expressions
     lines = ["# Large Math Benchmark Document\n"]
     for i in range(500):
-        lines.append(f"Inline eq {i}: $f_{i}(x) = x_{i}^2 + \\alpha_{i} x$ and display:")
-        lines.append(f"$$\\int_{{0}}^{{\\infty}} e^{{-{i} t}} dt = \\frac{{1}}{{{i + 1}}}$$")
+        lines.append(
+            f"Inline eq {i}: $f_{i}(x) = x_{i}^2 + \\alpha_{i} x$ and display:"
+        )
+        lines.append(
+            f"$$\\int_{{0}}^{{\\infty}} e^{{-{i} t}} dt = \\frac{{1}}{{{i + 1}}}$$"
+        )
     doc = "\n".join(lines)
     html_out = compiler.compile(doc, standalone=False)
     assert "$f_0(x) = x_0^2 + \\alpha_0 x$" in html_out
@@ -74,7 +77,9 @@ def test_math_restoration_large():
 def test_export_static(tmp_path):
     compiler = LanternCompiler()
     doc_path = tmp_path / "test_doc.md"
-    doc_path.write_text("# Test Document\n\nSome content with math $x^2$ here.\n", encoding="utf-8")
+    doc_path.write_text(
+        "# Test Document\n\nSome content with math $x^2$ here.\n", encoding="utf-8"
+    )
     out_dir = tmp_path / "static_bundle"
     res_dir = compiler.export_static(doc_path, output_dir=out_dir)
 
@@ -91,7 +96,9 @@ def test_export_static(tmp_path):
 def test_export_jinja(tmp_path):
     compiler = LanternCompiler()
     doc_path = tmp_path / "test_doc.md"
-    doc_path.write_text("# Test Document\n\nContent for Jinja server.\n", encoding="utf-8")
+    doc_path.write_text(
+        "# Test Document\n\nContent for Jinja server.\n", encoding="utf-8"
+    )
     out_dir = tmp_path / "jinja_bundle"
     res_dir = compiler.export_jinja(doc_path, output_dir=out_dir)
 

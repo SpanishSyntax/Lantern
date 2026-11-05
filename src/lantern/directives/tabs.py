@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 from lantern.directives.utils import extract_directive_blocks
@@ -55,9 +55,13 @@ class TabsBlockProcessor(BlockProcessor):
             lines = blk.splitlines()
             if lines and self.TAB_SEP_RE.match(lines[0].strip()):
                 if curr_blocks or curr_title:
-                    tab_list.append((curr_title or f"Tab {len(tab_list) + 1}", curr_blocks))
+                    tab_list.append(
+                        (curr_title or f"Tab {len(tab_list) + 1}", curr_blocks)
+                    )
                     curr_blocks = []
-                curr_title = self.TAB_SEP_RE.match(lines[0].strip()).group("title").strip()
+                curr_title = (
+                    self.TAB_SEP_RE.match(lines[0].strip()).group("title").strip()
+                )
                 if len(lines) > 1:
                     curr_blocks.append("\n".join(lines[1:]))
             else:

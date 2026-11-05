@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 import xml.etree.ElementTree as etree
+
 from markdown.blockprocessors import BlockProcessor
 
 from lantern.directives.utils import extract_directive_blocks
@@ -17,7 +17,9 @@ class ComparisonBlockProcessor(BlockProcessor):
         r"^:::\s*comparison(?:\s+(?P<args>.*))?$",
         re.IGNORECASE,
     )
-    CARD_SEP_RE = re.compile(r"^===\s*(?P<side>Left|Right)?[:\s]*(?P<title>.*?)\s*$", re.IGNORECASE)
+    CARD_SEP_RE = re.compile(
+        r"^===\s*(?P<side>Left|Right)?[:\s]*(?P<title>.*?)\s*$", re.IGNORECASE
+    )
 
     def test(self, parent: etree.Element, block: str) -> bool:
         lines = block.strip().splitlines()
@@ -75,7 +77,10 @@ class ComparisonBlockProcessor(BlockProcessor):
                 hdr.set("class", "lantern-comparison-header")
 
                 badge = etree.SubElement(hdr, "span")
-                badge.set("class", f"lantern-badge {'lantern-badge-cyan' if side_name == 'left' else 'lantern-badge-purple'}")
+                badge.set(
+                    "class",
+                    f"lantern-badge {'lantern-badge-cyan' if side_name == 'left' else 'lantern-badge-purple'}",
+                )
                 badge.set("style", "margin-bottom: 0;")
                 badge.text = side_name.title()
 

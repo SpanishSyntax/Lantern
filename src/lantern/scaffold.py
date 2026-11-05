@@ -45,7 +45,11 @@ def create_project(
             (target_dir / ".gitignore").write_text(
                 "dist/\n__pycache__/\n*.html\n", encoding="utf-8"
             )
-            files = [str(p.relative_to(target_dir)) for p in target_dir.rglob("*") if p.is_file()]
+            files = [
+                str(p.relative_to(target_dir))
+                for p in target_dir.rglob("*")
+                if p.is_file()
+            ]
             return {
                 "status": "ok",
                 "name": clean_name,
@@ -157,9 +161,13 @@ Adjust real-time parameters below:
 
     (target_dir / "plot_optimization.py").write_text(sample_plot_py, encoding="utf-8")
     md_file.write_text(content, encoding="utf-8")
-    (target_dir / ".gitignore").write_text("dist/\n__pycache__/\n*.html\n", encoding="utf-8")
+    (target_dir / ".gitignore").write_text(
+        "dist/\n__pycache__/\n*.html\n", encoding="utf-8"
+    )
 
-    files = [str(p.relative_to(target_dir)) for p in target_dir.rglob("*") if p.is_file()]
+    files = [
+        str(p.relative_to(target_dir)) for p in target_dir.rglob("*") if p.is_file()
+    ]
     return {
         "status": "ok",
         "name": clean_name,
