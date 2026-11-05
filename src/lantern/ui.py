@@ -546,6 +546,9 @@ class LanternUIProxy:
             except Exception:
                 self.panel(title, [f"URL: {url}", f"Target: {target}"])
 
+    status_card = serve_banner
+    card = serve_banner
+
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._base, name)
         if (

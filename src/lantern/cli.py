@@ -388,7 +388,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     else:
         target_desc = target_path.name
 
-    ui.serve_banner(
+    ui.status_card(
         title="🏮 Lantern Live Dev Server",
         url=url,
         target=target_desc,
