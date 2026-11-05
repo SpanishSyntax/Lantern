@@ -424,6 +424,128 @@ class LanternUIProxy:
             )
         return select_menu(title=title, options=options, default_index=default_index)
 
+    def render_help(
+        self,
+        tagline: str,
+        usage: Sequence[str] | str,
+        commands: Sequence[tuple[str, str]] | dict[str, str] | None = None,
+        options: Sequence[tuple[str, str]] | dict[str, str] | None = None,
+        sections: Sequence[tuple[str, Sequence[tuple[str, str]] | str]] | None = None,
+        examples: Sequence[tuple[str, str]] | Sequence[str] | None = None,
+        version: str | None = None,
+        app_name: str | None = None,
+        is_agent: bool | None = None,
+    ) -> str:
+        name = app_name or "Lantern"
+        agent = is_agent if is_agent is not None else self._agent_mode
+        try:
+            from prism.help import render_help
+
+            return render_help(
+                app_name=name,
+                tagline=tagline,
+                usage=usage,
+                commands=commands,
+                options=options,
+                sections=sections,
+                examples=examples,
+                version=version,
+                is_agent=agent,
+            )
+        except Exception:
+            lines: list[str] = []
+            clean_tagline = tagline.strip()
+            v_str = f" v{version}" if version else ""
+            if agent:
+                lines.append(f"{name}{v_str} - {clean_tagline}")
+            else:
+                lines.append(f"{self.badge()} {self.bold(f'{clean_tagline}{v_str}')}")
+
+            u_list = [usage] if isinstance(usage, str) else list(usage)
+            if u_list:
+                lines.append("")
+                lines.append("Usage:" if agent else self.blue("Usage:"))
+                for u in u_list:
+                    lines.append(f"  {u}")
+
+            if commands:
+                lines.append("")
+                lines.append("Commands:" if agent else self.blue("Commands:"))
+                cmd_items = commands.items() if isinstance(commands, dict) else commands
+                for k, v in cmd_items:
+                    lines.append(f"  {k:<22} {v}")
+
+            if sections:
+                for title, content in sections:
+                    lines.append("")
+                    lines.append(f"{title}:" if agent else self.blue(f"{title}:"))
+                    if isinstance(content, str):
+                        lines.append(content)
+                    else:
+                        for k, v in content:
+                            lines.append(f"  {k:<22} {v}")
+
+            if options:
+                lines.append("")
+                lines.append("Options:" if agent else self.blue("Options:"))
+                opt_items = options.items() if isinstance(options, dict) else options
+                for k, v in opt_items:
+                    lines.append(f"  {k:<22} {v}")
+
+            if examples:
+                lines.append("")
+                lines.append("Examples:" if agent else self.blue("Examples:"))
+                for ex in examples:
+                    cmd, cmt = ex if isinstance(ex, tuple) else (ex, "")
+                    if cmt:
+                        lines.append(f"  {cmd:<38} # {cmt}")
+                    else:
+                        lines.append(f"  {cmd}")
+
+            return "\n".join(lines) + "\n"
+
+    def serve_banner(
+        self,
+        title: str,
+        url: str,
+        target: str | None = None,
+        details: Sequence[tuple[str, str]] | dict[str, str] | None = None,
+        controls: Sequence[tuple[str, str]] | None = None,
+        warning: str | None = None,
+        tip: str | None = None,
+        border_color: str = "1;36",
+        width: int = 76,
+    ) -> None:
+        if hasattr(self._base, "serve_banner"):
+            self._base.serve_banner(
+                title=title,
+                url=url,
+                target=target,
+                details=details,
+                controls=controls,
+                warning=warning,
+                tip=tip,
+                border_color=border_color,
+                width=width,
+            )
+        else:
+            try:
+                from prism.banner import render_serve_banner
+
+                render_serve_banner(
+                    title=title,
+                    url=url,
+                    target=target,
+                    details=details,
+                    controls=controls,
+                    warning=warning,
+                    tip=tip,
+                    border_color=border_color,
+                    width=width,
+                )
+            except Exception:
+                self.panel(title, [f"URL: {url}", f"Target: {target}"])
+
     def __getattr__(self, name: str) -> Any:
         attr = getattr(self._base, name)
         if (

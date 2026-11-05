@@ -23,83 +23,64 @@ from lantern.ui import (
 
 def get_usage() -> str:
     """Returns the Prism-styled help and usage guide matching Snowpack & Borealis, or compact agent guide."""
-    if ui.is_agent:
-        return f"""Lantern v{__version__} - Frost Explainer & Simulation Dashboard Compiler
-Usage: lantern [command] [file.md] [options]
-
-Commands:
-  new <name> [-t explainer|dashboard|optimization]
-  build [file] [-o out.html] [--standalone] [-t template]
-  export [file] [-o dist/] [--format static|jinja] [-t template]
-  serve [file] [-p port] [--host host] [--no-open]
-  status [--json]
-  list [--json]
-  mcp
-
-Options:
-  --agent, -A            Compact machine/agent friendly output
-  --json                 Structured JSON output
-  -o, --output PATH      Output destination file or directory
-  -t, --template NAME    Template name (default: explainer)
-  --standalone           Inline all CSS, KaTeX, and JS into single file
-  -p, --port PORT        Dev server port (default: 8080)
-  --no-open              Do not auto-open browser
-  -h, --help             Show this help message
-  -v, --version          Show version number
-"""
-
-    return f"""{ui.badge()} {ui.bold("Frost's Interactive Explainer & Simulation Dashboard Compiler")}
-
-{ui.blue("Usage:")}
-  lantern                               Open interactive dashboard & quick actions
-  lantern [file] [options]              Compile Markdown into standalone HTML
-  lantern build [file] [options]        Explicit compilation command
-  lantern export [file] [options]       Export deployable static bundle or Jinja2 server project
-  lantern serve [file] [options]        Spin up live-reloading dev server with SSE browser sync
-  lantern new <name> [options]          Scaffold a new explainer or simulation workspace
-  lantern status                        Display Prism terminal dashboard of active engines
-  lantern list                          List available templates and documents
-
-{ui.blue("Commands:")}
-  new <name>             Scaffold a starter explainer, dashboard, or optimization lab
-  build [file]           Compile Markdown into an optimized HTML document
-  export [file]          Export static bundle or standalone Jinja2 web application project
-  serve [file]           Spin up ephemeral HTTP dev server with browser live-reloading
-  status                 Display Prism telemetry dashboard & engine availability
-  list                   List available templates and detected markdown documents
-  mcp                    Run Model Context Protocol (MCP) stdio server
-
-{ui.blue("Options:")}
-  -o, --output PATH      Specify output HTML filename or export directory
-  -t, --template NAME    Layout template: 'explainer' (default), 'dashboard', or 'optimization'
-  --format FORMAT        Export format for 'export': 'static' (default) or 'jinja'
-  --standalone           Inline all CSS, KaTeX math, and JavaScript into a single HTML file
-  -p, --port PORT        Dev server HTTP port (default: 8080)
-  --host HOST            Dev server host (default: 127.0.0.1)
-  --no-open              Do not automatically open browser on launch
-  --agent, -A            Compact machine/agent friendly output mode
-  --json                 Output structured JSON payloads for agent/MCP tooling
-  --color MODE           Color output mode: auto, always, never (default: auto)
-  --no-color             Disable colored output
-  -h, --help             Show this help message and exit
-  -V, -v, --version      Show version information and exit
-
-{ui.blue("Directives Ecosystem:")}
-  • {ui.bold("Layout:")}    ::: grid, ::: card, ::: stepper, ::: curtain
-  • {ui.bold("Controls:")}  ::: slider, ::: switch, ::: segments, ::: select, ::: player
-  • {ui.bold("Content:")}   ::: plot (with lightbox modal), ::: metrics, ::: tabs,
-                  ::: accordion, ::: comparison, ::: callout, [?term: hint]
-
-{ui.blue("Examples:")}
-  lantern                               # Interactive dashboard & quick action menu
-  lantern explainer.md                  # Compile explainer.md -> dist/explainer.html
-  lantern build explainer.md --standalone # Self-contained HTML with inlined assets
-  lantern export explainer.md           # Self-contained static bundle with Nginx/Caddy config
-  lantern export explainer.md --format jinja # Standalone Python Jinja2 project with Dockerfile
-  lantern serve explainer.md            # Live-reloading server at http://127.0.0.1:8080
-  lantern new convex-lab --template optimization # Scaffold domain optimization lab
-  lantern status --agent                # Machine-friendly status output
-"""
+    return ui.render_help(
+        tagline="Frost's Interactive Explainer & Simulation Dashboard Compiler",
+        version=__version__,
+        usage=[
+            "lantern [file] [options]",
+            "lantern build [file] [options]",
+            "lantern export [file] [options]",
+            "lantern serve [file] [options]",
+            "lantern new <name> [options]",
+            "lantern status",
+            "lantern list",
+            "lantern mcp",
+        ],
+        commands=[
+            ("new <name>", "Scaffold a starter explainer, dashboard, or optimization lab"),
+            ("build [file]", "Compile Markdown into an optimized HTML document"),
+            ("export [file]", "Export static bundle or standalone Jinja2 web application project"),
+            ("serve [file]", "Spin up ephemeral HTTP dev server with browser live-reloading"),
+            ("status", "Display Prism telemetry dashboard & engine availability"),
+            ("list", "List available templates and detected markdown documents"),
+            ("mcp", "Run Model Context Protocol (MCP) stdio server"),
+        ],
+        options=[
+            ("-o, --output PATH", "Specify output HTML filename or export directory"),
+            ("-t, --template NAME", "Layout template: 'explainer' (default), 'dashboard', or 'optimization'"),
+            ("--format FORMAT", "Export format for 'export': 'static' (default) or 'jinja'"),
+            ("--standalone", "Inline all CSS, KaTeX math, and JavaScript into a single HTML file"),
+            ("-p, --port PORT", "Dev server HTTP port (default: 8080)"),
+            ("--host HOST", "Dev server host (default: 127.0.0.1)"),
+            ("--no-open", "Do not automatically open browser on launch"),
+            ("--agent, -A", "Compact machine/agent friendly output mode"),
+            ("--json", "Output structured JSON payloads for agent/MCP tooling"),
+            ("--color MODE", "Color output mode: auto, always, never (default: auto)"),
+            ("--no-color", "Disable colored output"),
+            ("-h, --help", "Show this help message and exit"),
+            ("-V, -v, --version", "Show version information and exit"),
+        ],
+        sections=[
+            (
+                "Directives Ecosystem",
+                [
+                    ("Layout", "::: grid, ::: card, ::: stepper, ::: curtain"),
+                    ("Controls", "::: slider, ::: switch, ::: segments, ::: select, ::: player"),
+                    ("Content", "::: plot (with lightbox modal), ::: metrics, ::: tabs, ::: accordion"),
+                ],
+            )
+        ],
+        examples=[
+            ("lantern", "Interactive dashboard & quick action menu"),
+            ("lantern explainer.md", "Compile explainer.md -> dist/explainer.html"),
+            ("lantern build explainer.md --standalone", "Self-contained HTML with inlined assets"),
+            ("lantern export explainer.md", "Self-contained static bundle with Nginx/Caddy config"),
+            ("lantern export explainer.md --format jinja", "Standalone Python Jinja2 project with Dockerfile"),
+            ("lantern serve explainer.md", "Live-reloading server at http://127.0.0.1:8080"),
+            ("lantern new convex-lab --template optimization", "Scaffold domain optimization lab"),
+            ("lantern status --agent", "Machine-friendly status output"),
+        ],
+    )
 
 
 def discover_documents(cwd: Path | None = None) -> list[Path]:
@@ -407,23 +388,20 @@ def cmd_serve(args: argparse.Namespace) -> int:
     else:
         target_desc = target_path.name
 
-    lines = [
-        f"URL:          {ui.bold_cyan(url)}",
-        f"Target:       {ui.bold(target_desc)}",
-        f"Template:     {template_name}",
-        f"Live Reload:  {ui.green('Active (SSE /_lantern/events)')}",
-        f"Watching:     {server.workspace_dir}",
-        "",
-        ui.yellow(
-            "⚠️  Ephemeral local dev server only. Not intended for production hosting."
-        ),
-        ui.dim(
-            "   For production hosting, compile with 'lantern build' or 'lantern export'."
-        ),
-        "",
-        f"Controls:     {ui.bold('[q]')} or {ui.bold('[Ctrl+C]')} to stop  |  {ui.bold('[r]')} reload  |  {ui.bold('[o]')} open",
-    ]
-    ui.panel("🏮 Lantern Live Dev Server", lines, border_color="1;36")
+    ui.serve_banner(
+        title="🏮 Lantern Live Dev Server",
+        url=url,
+        target=target_desc,
+        details={
+            "Template": template_name,
+            "Live Reload": "Active (SSE /_lantern/events)",
+            "Watching": str(server.workspace_dir),
+        },
+        controls=[("[q]", "stop"), ("[r]", "reload"), ("[o]", "open")],
+        warning="Ephemeral local dev server only. Not intended for production hosting.",
+        tip="For production hosting, compile with 'lantern build' or 'lantern export'.",
+        border_color="1;36",
+    )
 
     try:
         server.start(open_browser=not no_open)
