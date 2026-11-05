@@ -301,12 +301,12 @@ class LanternUIProxy:
         if self._json_mode:
             return
         if self._agent_mode:
-            clean_title = strip_ansi(title).strip()
-            print(f"=== {clean_title} ===")
+            clean_title = strip_emojis(strip_ansi(title)).strip()
+            if clean_title:
+                print(f"[{clean_title}]")
             body = lines.splitlines() if isinstance(lines, str) else list(lines)
             for line in body:
-                print(strip_ansi(line))
-            print()
+                print(strip_emojis(strip_ansi(line)))
             return
         if hasattr(self._base, "panel"):
             self._base.panel(
@@ -321,11 +321,11 @@ class LanternUIProxy:
         if self._json_mode:
             return
         if self._agent_mode:
-            clean_title = strip_ansi(title).strip()
+            clean_title = strip_emojis(strip_ansi(title)).strip()
             print(f"ERROR: {clean_title}", file=sys.stderr)
             body = lines.splitlines() if isinstance(lines, str) else list(lines)
             for line in body:
-                print(strip_ansi(line), file=sys.stderr)
+                print(strip_emojis(strip_ansi(line)), file=sys.stderr)
             return
         if hasattr(self._base, "error_panel"):
             self._base.error_panel(title=title, lines=lines)
@@ -336,7 +336,7 @@ class LanternUIProxy:
         if self._json_mode:
             return
         if self._agent_mode:
-            print(f"[lantern] {strip_ansi(msg)}")
+            print(f"[lantern] {strip_emojis(strip_ansi(msg))}")
             return
         if hasattr(self._base, "action"):
             self._base.action(msg, symbol=symbol)
@@ -347,7 +347,7 @@ class LanternUIProxy:
         if self._json_mode:
             return
         if self._agent_mode:
-            print(f"[lantern] {strip_ansi(msg)}")
+            print(f"[lantern] {strip_emojis(strip_ansi(msg))}")
             return
         if hasattr(self._base, "info"):
             self._base.info(msg, symbol=symbol)
@@ -358,7 +358,7 @@ class LanternUIProxy:
         if self._json_mode:
             return
         if self._agent_mode:
-            print(f"[lantern:ok] {strip_ansi(msg)}")
+            print(f"[lantern:ok] {strip_emojis(strip_ansi(msg))}")
             return
         if hasattr(self._base, "success"):
             self._base.success(msg)
@@ -369,7 +369,7 @@ class LanternUIProxy:
         if self._json_mode:
             return
         if self._agent_mode:
-            print(f"[lantern:warn] {strip_ansi(msg)}", file=sys.stderr)
+            print(f"[lantern:warn] {strip_emojis(strip_ansi(msg))}", file=sys.stderr)
             return
         if hasattr(self._base, "warn"):
             self._base.warn(msg)
@@ -381,12 +381,16 @@ class LanternUIProxy:
             import json
 
             print(
-                json.dumps({"status": "error", "message": strip_ansi(msg)}),
+                json.dumps(
+                    {"status": "error", "message": strip_emojis(strip_ansi(msg))}
+                ),
                 file=sys.stderr,
             )
             return
         if self._agent_mode:
-            print(f"[lantern:error] {strip_ansi(msg)}", file=sys.stderr)
+            print(
+                f"[lantern:error] {strip_emojis(strip_ansi(msg))}", file=sys.stderr
+            )
             return
         if hasattr(self._base, "error"):
             self._base.error(msg)
