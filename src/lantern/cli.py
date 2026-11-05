@@ -13,6 +13,7 @@ from typing import Any, Sequence
 from lantern import __version__
 from lantern.compiler import LanternCompiler
 from lantern.config import SiteConfig
+from lantern.scaffold import create_project
 from lantern.server import LanternDevServer
 from lantern.site import LanternSiteBuilder
 from lantern.ui import (
@@ -38,6 +39,7 @@ Commands:
   serve [file] [-p port] [--host host] [--no-open]
   status [--json]
   list [--json]
+  mcp
 
 Options:
   --agent, -A            Compact machine/agent friendly output
@@ -70,6 +72,7 @@ Options:
   serve [file]           Spin up ephemeral HTTP dev server with browser live-reloading
   status                 Display Prism telemetry dashboard & engine availability
   list                   List available templates and detected markdown documents
+  mcp                    Run Model Context Protocol (MCP) stdio server
 
 {ui.blue("Options:")}
   -o, --output PATH      Specify output HTML filename or export directory
@@ -129,136 +132,20 @@ def find_default_target(cwd: Path | None = None) -> Path | None:
 
 def cmd_new(args: argparse.Namespace) -> int:
     """Scaffold a new explainer, simulation dashboard, or domain lab workspace."""
-    name: str = args.name
-    template_type: str = (args.template or "explainer").lower()
-    target_dir = Path.cwd() / name
-
-    if target_dir.exists():
-        ui.error(f"Directory '{name}' already exists.")
+    template_choice = getattr(args, "template", "explainer") or "explainer"
+    res = create_project(name=args.name, template=template_choice)
+    if res.get("status") == "error":
+        ui.error(res["error"])
         return 1
 
-    target_dir.mkdir(parents=True, exist_ok=True)
-    compiler = LanternCompiler()
-
-    if template_type == "optimization":
-        opt_template_dir = compiler.template_dir / "optimization"
-        if opt_template_dir.exists():
-            shutil.copytree(opt_template_dir, target_dir, dirs_exist_ok=True)
-            (target_dir / ".gitignore").write_text(
-                "dist/\n__pycache__/\n*.html\n", encoding="utf-8"
-            )
-            ui.success(f"Scaffolded new optimization lab workspace in '{name}/'")
-            print(f"\n  {ui.bold_cyan('cd')} {name}")
-            print(f"  {ui.bold_cyan('lantern serve')} explainer.md\n")
-            return 0
-
-    # Sample Barograph plotting script
-    sample_plot_py = """import numpy as np
-import plotly.graph_objects as go
-
-x = np.linspace(-2.0, 2.0, 80)
-y = np.linspace(-1.0, 3.0, 80)
-X, Y = np.meshgrid(x, y)
-Z = np.log10((1.0 - X) ** 2 + 100.0 * (Y - X ** 2) ** 2 + 1.0)
-
-fig = go.Figure(
-    data=[go.Surface(x=X, y=Y, z=Z, colorscale="Viridis", showscale=False)]
-)
-fig.update_layout(
-    template="plotly_dark",
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
-    margin=dict(l=0, r=0, t=30, b=0),
-)
-"""
-
-    if template_type == "dashboard":
-        md_file = target_dir / "dashboard.md"
-        content = f"""---
-title: "{name.title()} Simulation Dashboard"
-subtitle: "Interactive Multi-Method Exploration Deck"
-template: dashboard
----
-
-::: grid 60/40
-=== Live Simulation Deck
-::: plot plot_optimization.py backend=plotly height=480px title="System Phase Manifold"
-:::
-
-=== Control Center
-::: card title="Lab Controls" badge="Active" icon="🎛️"
-::: slider id="step-size" label="Simulation Step Size" min="0.001" max="0.1" step="0.005" default="0.01" unit="s"
-:::
-
-::: switch id="damping-toggle" label="Enable Damping Regularization" default=true
-:::
-
-::: segments id="mode-selector" default="mode-a"
-- [mode-a]: Mode A (Standard)
-- [mode-b]: Mode B (High-Precision)
-:::
-:::
-:::
-
-::: metrics cols=4
-- Iterations: 120
-- State Norm: 0.0042
-- Latency: 1.2ms [badge=emerald]
-- System Health: Nominal [badge=cyan]
-:::
-"""
-    else:
-        md_file = target_dir / "explainer.md"
-        content = f"""---
-title: "{name.title()} Interactive Explainer"
-subtitle: "A Mathematical Deep-Dive with Live Visualizations"
-author: "Frost Research Group"
-template: explainer
----
-
-# Introduction
-
-Welcome to **{name.title()}**. This document is an interactive scientific explainer compiled with `Lantern`.
-
-::: callout type=note title="Interactive Document"
-Features multi-column spatial strips, live parameter sliders, tabs, and client-side KaTeX math ($x_{{k+1}} = x_k - \\alpha \\nabla f(x_k)$).
-:::
-
-::: grid 60/40
-=== 3D Surface
-::: plot plot_optimization.py backend=plotly height=460px title="Objective Surface"
-:::
-
-=== Parameter Lab
-::: card title="Sensitivity Parameters" badge="Interactive" icon="⚡"
-Adjust real-time parameters below:
-
-::: slider id="alpha" label="Step Size α" min="0.0001" max="0.01" step="0.0005" default="0.002" unit="s"
-:::
-
-::: switch id="momentum" label="Enable Polyak Momentum" default=true
-:::
-:::
-:::
-
-::: comparison
-=== Left: Method A (First-Order)
-- Linear convergence rate $O(1/k)$
-- Low memory overhead $O(n)$
-
-=== Right: Method B (Second-Order)
-- Quadratic local convergence
-- Requires curvature matrix solve
-:::
-"""
-
-    (target_dir / "plot_optimization.py").write_text(sample_plot_py, encoding="utf-8")
-    md_file.write_text(content, encoding="utf-8")
-    (target_dir / ".gitignore").write_text("dist/\n__pycache__/\n*.html\n", encoding="utf-8")
+    name = res["name"]
+    template_type = res["template"]
+    target_file = res.get("target_file")
+    main_file = Path(target_file).name if target_file else "explainer.md"
 
     ui.success(f"Scaffolded new {template_type} project in '{name}/'")
     print(f"\n  {ui.bold_cyan('cd')} {name}")
-    print(f"  {ui.bold_cyan('lantern serve')} {md_file.name}\n")
+    print(f"  {ui.bold_cyan('lantern serve')} {main_file}\n")
     return 0
 
 
@@ -895,6 +782,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_list.add_argument("--json", action="store_true")
     p_list.add_argument("-h", "--help", action="store_true")
 
+    # mcp
+    p_mcp = subparsers.add_parser("mcp", add_help=False)
+    p_mcp.add_argument("-h", "--help", action="store_true")
+
     return parser
 
 
@@ -939,7 +830,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # Handle direct document compilation without explicit 'build' keyword
     # e.g., 'lantern explainer.md' or 'lantern explainer.md --standalone'
-    known_commands = ("new", "build", "export", "serve", "status", "list")
+    known_commands = ("new", "build", "export", "serve", "status", "list", "mcp")
     if cmd not in known_commands and not cmd.startswith("-"):
         p = Path(cmd)
         if p.suffix == ".md" or p.exists():
@@ -991,6 +882,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     elif args.command == "list":
         return cmd_list(args)
+
+    elif args.command == "mcp":
+        from lantern.mcp import main as mcp_main
+
+        return mcp_main()
 
     else:
         print(get_usage())
