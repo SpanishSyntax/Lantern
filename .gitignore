@@ -8,3 +8,5 @@ result-*
 .direnv/
 *.html
 !src/lantern/templates/*.html.j2
+!docs/**/*.html
+!docs/*.html
