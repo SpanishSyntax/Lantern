@@ -191,7 +191,7 @@ Upgrade `LanternDevServer` to handle both single-file and directory targets:
 When complete, the following directory structure must compile and run flawlessly:
 
 ```bash
-cd "/home/usurper/Workspace/TUDelft/SC42056 Optimization"
+cd "/home/usurper/Workspace/Academic/SC42056 Optimization"
 lantern build site.yaml -o dist/
 ```
 
