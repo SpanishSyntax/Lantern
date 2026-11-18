@@ -7,6 +7,8 @@ import xml.etree.ElementTree as etree
 
 from markdown.blockprocessors import BlockProcessor
 
+from lantern.directives.utils import extract_directive_blocks
+
 
 class SelectBlockProcessor(BlockProcessor):
     """Processes ::: select id="..." label="..." default="..." blocks with list items - [key]: Label."""
@@ -54,24 +56,7 @@ class SelectBlockProcessor(BlockProcessor):
         default_val = extract_arg("default", default_val)
 
         # Extract blocks inside the directive
-        first_block_rest = "\n".join(blocks[0].strip().splitlines()[1:])
-        blocks.pop(0)
-
-        accumulated: list[str] = []
-        if first_block_rest.strip():
-            accumulated.append(first_block_rest)
-
-        while blocks:
-            blk = blocks.pop(0)
-            lines = blk.splitlines()
-            if lines and self.END_RE.match(lines[-1].strip()):
-                if len(lines) > 1:
-                    accumulated.append("\n".join(lines[:-1]))
-                break
-            elif self.END_RE.match(blk.strip()):
-                break
-            else:
-                accumulated.append(blk)
+        accumulated = extract_directive_blocks(blocks)
 
         # Parse options
         options: list[tuple[str, str]] = []

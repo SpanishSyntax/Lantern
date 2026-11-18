@@ -29,17 +29,27 @@ def extract_directive_blocks(blocks: list[str]) -> list[str]:
 
     if first_block_rest.strip():
         # Check if first_block_rest contains opening or closing directives
-        for rest_line in first_block_rest.splitlines():
+        rest_lines = first_block_rest.splitlines()
+        stop_index: int | None = None
+        for i, rest_line in enumerate(rest_lines):
             s = rest_line.strip()
             if DIRECTIVE_START_RE.match(s):
                 depth += 1
             elif DIRECTIVE_END_RE.match(s):
                 depth -= 1
                 if depth == 0:
+                    stop_index = i
                     break
-        accumulated.append(first_block_rest)
-        if depth == 0:
+
+        if stop_index is not None:
+            if stop_index > 0:
+                accumulated.append("\n".join(rest_lines[:stop_index]))
+            remaining = rest_lines[stop_index + 1 :]
+            if remaining:
+                blocks.insert(0, "\n".join(remaining))
             return accumulated
+        else:
+            accumulated.append(first_block_rest)
 
     while blocks:
         blk = blocks.pop(0)

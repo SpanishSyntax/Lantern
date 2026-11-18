@@ -366,3 +366,37 @@ def test_math_plot_directive():
     assert "Harmonic Wave" in html_out
     assert "canvas-lantern-math-plot-" in html_out
     assert "Math.sin(omega * x)" in html_out
+
+
+def test_metrics_and_grid_no_leaks():
+    compiler = LanternCompiler()
+    md = """
+::: metrics cols=4
+- Chapters: 9 Master Chapters [badge=cyan]
+- Frameworks: 8 Core Formalisms [badge=emerald]
+:::
+
+## Four Pillars
+
+::: grid 50/50
+=== Continuous Physical Paradigms
+::: card title="Physical & Energy-Based Formalisms" icon="⚡"
+1. Lumped First-Principles (ODEs)
+2. Distributed Parameters (PDEs)
+:::
+
+=== Discrete, Hybrid & Reduced Paradigms
+::: card title="Discrete, Hybrid & Order-Reduction Formalisms" icon="🔀"
+6. Discrete-Event Automata & Petri Nets
+7. Hybrid Dynamical Systems
+:::
+:::
+"""
+    html_out = compiler.compile(md)
+    assert ":::" not in html_out
+    assert "=== " not in html_out
+    assert "lantern-metrics-deck" in html_out
+    assert "Four Pillars" in html_out
+    assert "Continuous Physical Paradigms" in html_out
+    assert "Discrete, Hybrid &amp; Reduced Paradigms" in html_out
+    assert "lantern-card-title" in html_out
