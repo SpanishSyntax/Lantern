@@ -181,6 +181,11 @@ class LanternCompiler:
                 joined = "\n".join(fm_css_parts)
                 sibling_css = f"{sibling_css}\n{joined}" if sibling_css else joined
 
+        # Normalize directive boundary whitespace to prevent markdown block ingestion leaks
+        content = re.sub(r"([^\n])\n:::", r"\1\n\n:::", content)
+        content = re.sub(r"([^\n])\n(:::\s*[a-zA-Z0-9_\-]+)", r"\1\n\n\2", content)
+        content = re.sub(r"([^\n])\n(===\s*.*)", r"\1\n\n\2", content)
+
         # Protect math delimiters
         protected_content, math_placeholders = self._protect_math(content)
 
