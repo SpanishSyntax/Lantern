@@ -7,7 +7,11 @@ import xml.etree.ElementTree as etree
 
 from markdown.blockprocessors import BlockProcessor
 
-from lantern.directives.utils import extract_directive_blocks
+from lantern.directives.utils import (
+    DIRECTIVE_END_RE,
+    DIRECTIVE_START_RE,
+    extract_directive_blocks,
+)
 
 
 class StepperBlockProcessor(BlockProcessor):
@@ -49,23 +53,32 @@ class StepperBlockProcessor(BlockProcessor):
         # Extract blocks inside the directive with depth tracking
         accumulated = extract_directive_blocks(blocks)
 
-        # Parse steps using STEP_SEP_RE
+        # Parse steps using STEP_SEP_RE with depth tracking for nested directives
         steps: list[tuple[str, list[str]]] = []
         curr_title = ""
         curr_blocks: list[str] = []
+        depth = 0
 
         for blk in accumulated:
             lines = blk.splitlines()
-            if lines and self.STEP_SEP_RE.match(lines[0].strip()):
+            first = lines[0].strip() if lines else ""
+            if lines and self.STEP_SEP_RE.match(first) and depth == 0:
                 if curr_blocks or curr_title:
                     steps.append((curr_title or f"Phase {len(steps) + 1}", curr_blocks))
                     curr_blocks = []
-                sep_match = self.STEP_SEP_RE.match(lines[0].strip())
+                sep_match = self.STEP_SEP_RE.match(first)
                 curr_title = (sep_match.group("title") or "").strip()
                 if len(lines) > 1:
                     curr_blocks.append("\n".join(lines[1:]))
             else:
                 curr_blocks.append(blk)
+
+            for line in lines:
+                s = line.strip()
+                if DIRECTIVE_START_RE.match(s):
+                    depth += 1
+                elif DIRECTIVE_END_RE.match(s):
+                    depth = max(0, depth - 1)
 
         if curr_blocks or curr_title:
             steps.append((curr_title or f"Phase {len(steps) + 1}", curr_blocks))
