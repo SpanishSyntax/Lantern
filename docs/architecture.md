@@ -19,8 +19,8 @@ flowchart TD
     
     Directives -->|"Layout (grid, card, stepper)"| HtmlLayout["CSS Grid & Stacking Components"]
     Directives -->|"Controls (slider, switch, select)"| HtmlControls["Reactive Input DOM Elements"]
-    Directives -->|"Plots (::: plot <script.py>)"| BaroExec["In-Process Barograph Runner"]
-    Directives -->|"Math (::: math-plot, KaTeX)"| ClientMath["Fast Client-Side Math Evaluator"]
+    Directives -->|"Plots (plot script.py)"| BaroExec["In-Process Barograph Runner"]
+    Directives -->|"Math (math-plot, KaTeX)"| ClientMath["Fast Client-Side Math Evaluator"]
     
     BaroExec --> PlotBundle["Plotly JSON Frames / Vector SVG"]
     
@@ -66,10 +66,10 @@ Lantern adopts a decentralized, zero-framework reactive event model based on nat
 ```mermaid
 sequenceDiagram
     participant User as Browser User
-    participant Slider as ::: slider (DOM Element)
+    participant Slider as slider Directive (DOM Element)
     participant Bus as window (Event Bus)
-    participant Plot as ::: plot (Plotly / Canvas)
-    participant Math as ::: math-plot (Canvas Evaluator)
+    participant Plot as plot Directive (Plotly / Canvas)
+    participant Math as math-plot Directive (Canvas Evaluator)
 
     User->>Slider: Drag slider (id="damping", value=0.45)
     Slider->>Bus: dispatchEvent("lantern:input", { id: "damping", value: 0.45 })
@@ -77,7 +77,7 @@ sequenceDiagram
     Bus->>Plot: Handle event (Plotly.animate / restyle)
     Plot->>Plot: Update active trajectory frame
     
-    Bus->>Math: Handle event (eval fn with \zeta=0.45)
+    Bus->>Math: Handle event (eval fn with zeta=0.45)
     Math->>Math: Redraw 60 FPS canvas curve
 ```
 
